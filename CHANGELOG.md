@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.2...v0.7.3) (2025-12-29)
+
+
+### Bug Fixes
+
+* changes to ensure that the plugin can start the server successfully. ([9caa606](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/9caa60625a4bb744a1fabaefce08ae87eee8a325))
+
 ## [0.7.2](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.1...v0.7.2) (2025-12-29)
 
 
