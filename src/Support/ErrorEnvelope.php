@@ -33,6 +33,8 @@
 
                 'result' => $payload,
 
+                'error' => null,
+
                 'meta' => $meta,
 
             ];
@@ -70,6 +72,8 @@
                 'id' => $id,
 
                 'version' => self::VERSION,
+
+                'result' => null,
 
                 'error' => $err,
 
