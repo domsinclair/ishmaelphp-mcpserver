@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.1...v0.7.2) (2025-12-29)
+
+
+### Miscellaneous Chores
+
+* tidy up composer downloads ([e0d9b98](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/e0d9b981366a1d683d1b1d4e41b02ee6bd250f56))
+
 ## [0.7.1](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.0...v0.7.1) (2025-12-29)
 
 
