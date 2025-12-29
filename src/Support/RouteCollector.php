@@ -64,7 +64,7 @@ final class RouteCollector
             })($file);
         } catch (\Throwable $e) {
             fwrite(STDERR, "[RouteCollector] Error including {$file}: " . $e->getMessage() . "\n");
-            return [];
+            throw $e;
         }
 
         if (is_array($result)) {
@@ -108,7 +108,7 @@ final class RouteCollector
             return $probe->collected;
         } catch (\Throwable $e) {
             fwrite(STDERR, "[RouteCollector] Error executing closure for {$moduleName}: " . $e->getMessage() . "\n");
-            return [];
+            throw $e;
         }
     }
 

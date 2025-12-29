@@ -69,8 +69,19 @@ final class RoutesListTool implements Tool
 
     public function execute(array $input): array
     {
-        $collector = new RouteCollector($this->context);
-        $routes = $collector->collect();
+        try {
+            $collector = new RouteCollector($this->context);
+            $routes = $collector->collect();
+        } catch (\Throwable $e) {
+            // Log to stderr and return a structured error that the Server can wrap
+            fwrite(STDERR, "[RoutesListTool] Fatal error: " . $e->getMessage() . "\n");
+            return [
+                'error' => [
+                    'code' => 500,
+                    'message' => 'Route enumeration failed: ' . $e->getMessage(),
+                ],
+            ];
+        }
 
         // Apply filtering
         $filter = isset($input['filter']) && is_string($input['filter']) ? $input['filter'] : null;

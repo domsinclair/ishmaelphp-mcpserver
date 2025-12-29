@@ -153,8 +153,20 @@
 
 
             // Execute tool
+            try {
+                $result = $tool->execute($params);
+            } catch (\Throwable $e) {
+                return [
+                    'error' => [
+                        'code' => 50000,
+                        'message' => 'Internal server error during tool execution: ' . $e->getMessage(),
+                    ],
+                ];
+            }
 
-            $result = $tool->execute($params);
+            if (isset($result['error'])) {
+                return [ 'error' => $result['error'] ];
+            }
 
 
 
