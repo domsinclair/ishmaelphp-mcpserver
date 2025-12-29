@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ishmael\McpServer\Support;
 
 use Ishmael\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Support\RouterProbe;
 
 /**
  * Discovers and parses Ishmael routes from Modules directory.
@@ -98,74 +99,17 @@ final class RouteCollector
 
     private function processFluentClosure(\Closure $closure, string $moduleName): array
     {
-        $collector = new class($moduleName) {
-            public array $collected = [];
-            private string $moduleName;
-            private array $groupStack = [];
-
-            public function __construct(string $moduleName) {
-                $this->moduleName = $moduleName;
-            }
-
-            public function get(string $path, $handler) { return $this->add(['GET'], $path, $handler); }
-            public function post(string $path, $handler) { return $this->add(['POST'], $path, $handler); }
-            public function put(string $path, $handler) { return $this->add(['PUT'], $path, $handler); }
-            public function patch(string $path, $handler) { return $this->add(['PATCH'], $path, $handler); }
-            public function delete(string $path, $handler) { return $this->add(['DELETE'], $path, $handler); }
-            public function any(string $path, $handler) {
-                return $this->add(['GET','POST','PUT','PATCH','DELETE','OPTIONS','HEAD'], $path, $handler);
-            }
-
-            public function group(array $options, callable $callback): void
-            {
-                $prefix = $options['prefix'] ?? '';
-                $currentPrefix = end($this->groupStack) ?: '';
-                $newPrefix = rtrim($currentPrefix, '/') . '/' . ltrim($prefix, '/');
-                $this->groupStack[] = $newPrefix;
-                $callback($this);
-                array_pop($this->groupStack);
-            }
-
-            public function add(array $methods, string $path, $handler): self
-            {
-                $currentPrefix = end($this->groupStack) ?: '';
-                $fullPath = rtrim($currentPrefix, '/') . '/' . ltrim($path, '/');
-                foreach ($methods as $method) {
-                    $this->collected[] = [
-                        'method' => $method,
-                        'path' => '/' . ltrim($fullPath, '/'),
-                        'handler' => $this->normalizeHandler($handler, $this->moduleName),
-                    ];
-                }
-                return $this;
-            }
-
-            public function name(string $name): self { return $this; }
-            public function middleware(array $mw): self { return $this; }
-
-            private function normalizeHandler($handler, string $moduleName): string
-            {
-                if (is_string($handler)) {
-                    return $handler;
-                }
-                if (is_array($handler) && count($handler) >= 2) {
-                    $class = is_object($handler[0]) ? get_class($handler[0]) : $handler[0];
-                    return $class . '@' . $handler[1];
-                }
-                if ($handler instanceof \Closure) {
-                    return 'Closure';
-                }
-                return 'unknown';
-            }
-        };
-
         try {
-            $closure($collector);
+            $probe = RouterProbe::make($moduleName);
+            if (method_exists(\Ishmael\Core\Router::class, 'setActive')) {
+                \Ishmael\Core\Router::setActive($probe);
+            }
+            $closure($probe);
+            return $probe->collected;
         } catch (\Throwable $e) {
             fwrite(STDERR, "[RouteCollector] Error executing closure for {$moduleName}: " . $e->getMessage() . "\n");
+            return [];
         }
-
-        return $collector->collected;
     }
 
     private function normalizeHandler($handler, string $moduleName): string

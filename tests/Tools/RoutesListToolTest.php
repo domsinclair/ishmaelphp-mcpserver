@@ -4,6 +4,27 @@ declare(strict_types=1);
 
 namespace Ishmael\McpServer\Tests\Tools;
 
+if (!class_exists('Ishmael\Core\Router')) {
+    eval('namespace Ishmael\Core { class Router { 
+        public static function group(array $options, callable $callback): void {
+            if (self::$active) { self::$active->group($options, $callback); }
+        }
+        private static ?Router $active = null;
+        public static function setActive(Router $r) { self::$active = $r; }
+        public function get(string $path, $handler, array $middleware = []): self { return $this; }
+        public function post(string $path, $handler, array $middleware = []): self { return $this; }
+        public function put(string $path, $handler, array $middleware = []): self { return $this; }
+        public function patch(string $path, $handler, array $middleware = []): self { return $this; }
+        public function delete(string $path, $handler, array $middleware = []): self { return $this; }
+        public function any(string $path, $handler, array $middleware = []): self { return $this; }
+        public function name(string $name): self { return $this; }
+        public function middleware(array $mw): self { return $this; }
+        public function add(array $methods, string $path, $handler, array $middleware = []): self { return $this; }
+        public function withoutCsrf(): self { return $this; }
+        public function withCsrf(): self { return $this; }
+    } }');
+}
+
 use Ishmael\McpServer\Project\ProjectContext;
 use Ishmael\McpServer\Tools\RoutesListTool;
 use PHPUnit\Framework\TestCase;

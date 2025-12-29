@@ -4,6 +4,40 @@ declare(strict_types=1);
 
 namespace Ishmael\McpServer\Tests\Support;
 
+if (!class_exists('Ishmael\Core\Router')) {
+    // Actually, we need the namespace to exist.
+    eval('namespace Ishmael\Core { class Router { 
+        public static function group(array $options, callable $callback): void {
+            if (self::$active) {
+                self::$active->group($options, $callback);
+            }
+        }
+        public static function groupWithCsrf(array $options, callable $callback): void {
+            if (self::$active) {
+                self::$active->groupWithCsrf($options, $callback);
+            }
+        }
+        public static function groupWithoutCsrf(array $options, callable $callback): void {
+            if (self::$active) {
+                self::$active->groupWithoutCsrf($options, $callback);
+            }
+        }
+        private static ?Router $active = null;
+        public static function setActive(Router $r) { self::$active = $r; }
+        public function get(string $path, $handler, array $middleware = []): self { return $this; }
+        public function post(string $path, $handler, array $middleware = []): self { return $this; }
+        public function put(string $path, $handler, array $middleware = []): self { return $this; }
+        public function patch(string $path, $handler, array $middleware = []): self { return $this; }
+        public function delete(string $path, $handler, array $middleware = []): self { return $this; }
+        public function any(string $path, $handler, array $middleware = []): self { return $this; }
+        public function name(string $name): self { return $this; }
+        public function middleware(array $mw): self { return $this; }
+        public function add(array $methods, string $path, $handler, array $middleware = []): self { return $this; }
+        public function withoutCsrf(): self { return $this; }
+        public function withCsrf(): self { return $this; }
+    } }');
+}
+
 use Ishmael\McpServer\Project\ProjectContext;
 use Ishmael\McpServer\Support\RouteCollector;
 use PHPUnit\Framework\TestCase;
@@ -67,11 +101,13 @@ PHP;
 
         $routesContent = <<<'PHP'
 <?php
-return function ($router): void {
+use Ishmael\Core\Router;
+
+return function (Router $router): void {
     $router->get('/users', 'UserController@index');
     $router->post('/users', 'UserController@store');
     
-    $router->group(['prefix' => '/v1'], function ($r) {
+    $router->group(['prefix' => '/v1'], function (Router $r) {
         $r->get('/status', 'StatusController@check');
     });
 };
@@ -92,5 +128,36 @@ PHP;
         
         $this->assertEquals('GET', $routes[2]['method']);
         $this->assertEquals('/v1/status', $routes[2]['path']);
+    }
+
+    public function testCollectsNestedGroups(): void
+    {
+        $modulesPath = $this->tempRoot . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Nested';
+        mkdir($modulesPath, 0777, true);
+
+        $routesContent = <<<'PHP'
+<?php
+use Ishmael\Core\Router;
+
+return function (Router $router): void {
+    $router->group(['prefix' => '/admin'], function (Router $r) {
+        $r->get('/dashboard', 'AdminController@index');
+        $r->group(['prefix' => '/users'], function (Router $r2) {
+            $r2->get('/', 'UserController@index');
+            $r2->get('/{id}', 'UserController@show');
+        });
+    });
+};
+PHP;
+        file_put_contents($modulesPath . DIRECTORY_SEPARATOR . 'routes.php', $routesContent);
+
+        $context = new ProjectContext($this->tempRoot, null, []);
+        $collector = new RouteCollector($context);
+        $routes = $collector->collect();
+
+        $this->assertCount(3, $routes);
+        $this->assertEquals('/admin/dashboard', $routes[0]['path']);
+        $this->assertEquals('/admin/users/', $routes[1]['path']);
+        $this->assertEquals('/admin/users/{id}', $routes[2]['path']);
     }
 }
