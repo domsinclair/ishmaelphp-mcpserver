@@ -1,0 +1,18 @@
+# Composer dependencies
+/vendor/
+
+# PHPUnit cache
+/.phpunit.cache/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Environment files
+.env
+.env.local
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,203 @@
+<?php
+
+    declare(strict_types=1);
+
+    namespace IshmaelPHP\McpServer\Server;
+
+    use IshmaelPHP\McpServer\Config\Settings;
+    use IshmaelPHP\McpServer\Contracts\Tool;
+    use IshmaelPHP\McpServer\Support\JsonSchemaValidator;
+    use IshmaelPHP\McpServer\Support\RateLimiter;
+    use IshmaelPHP\McpServer\Support\ResultCache;
+    use IshmaelPHP\McpServer\Support\Telemetry;
+
+    final class RequestRouter
+    {
+        /** @var array<string, Tool> */
+
+        private array $tools = [];
+
+        private Settings $settings;
+
+        private RateLimiter $rateLimiter;
+
+        private ResultCache $cache;
+
+        private Telemetry $telemetry;
+
+
+
+        public function __construct(?Settings $settings = null, ?RateLimiter $rateLimiter = null, ?ResultCache $cache = null, ?Telemetry $telemetry = null)
+        {
+
+            $this->settings = $settings ?? new Settings();
+
+            $this->rateLimiter = $rateLimiter ?? new RateLimiter($this->settings);
+
+            $this->cache = $cache ?? new ResultCache($this->settings);
+
+            $this->telemetry = $telemetry ?? new Telemetry($this->settings);
+        }
+
+
+
+        /** Register a tool by its getName() identifier. */
+
+        public function registerTool(Tool $tool): void
+        {
+
+            $this->tools[$tool->getName()] = $tool;
+        }
+
+
+
+        /** Return discovery listing of tools. */
+
+        public function listTools(): array
+        {
+
+            $items = [];
+
+            foreach ($this->tools as $tool) {
+                $items[] = [
+
+                    'name' => $tool->getName(),
+
+                    'description' => $tool->getDescription(),
+
+                    'inputSchema' => $tool->getInputSchema(),
+
+                    'outputSchema' => $tool->getOutputSchema(),
+
+                ];
+            }
+
+            return $items;
+        }
+
+
+
+        /** Dispatch a request by method name with params. Performs rate limiting, input/output validation, caching, and telemetry. */
+
+        public function dispatch(string $method, array $params = []): array
+        {
+
+            $t0 = (int)floor(microtime(true) * 1000);
+
+            // Rate limiting (global + per method)
+
+            if (($rl = $this->rateLimiter->check($method)) !== null) {
+                $this->telemetry->emit('rate_limited', [ 'method' => $method, 'code' => $rl['code'] ]);
+
+                return [ 'error' => $rl ];
+            }
+
+
+
+            if (!isset($this->tools[$method])) {
+                return [
+
+                    'error' => [
+
+                        'code' => -32601,
+
+                        'message' => 'Method not found: ' . $method,
+
+                    ],
+
+                ];
+            }
+
+            $tool = $this->tools[$method];
+
+
+
+            // Validate input
+
+            $validator = new JsonSchemaValidator();
+
+            $inputSchema = $tool->getInputSchema();
+
+            $inputErrors = $validator->validate($params, $inputSchema);
+
+            if ($inputErrors !== []) {
+                return [
+
+                    'error' => [
+
+                        'code' => 40001,
+
+                        'message' => 'Input validation failed',
+
+                        'details' => [ 'errors' => $inputErrors ],
+
+                    ],
+
+                ];
+            }
+
+
+
+            // Cache check
+
+            $cacheKey = $method . '|' . md5(json_encode($params));
+
+            $cached = $this->cache->get($method, $cacheKey);
+
+            if ($cached !== null) {
+                $this->telemetry->emit('cache_hit', [ 'method' => $method ]);
+
+                return [ 'result' => $cached ];
+            }
+
+
+
+            // Execute tool
+
+            $result = $tool->execute($params);
+
+
+
+            // Validate output
+
+            $outputSchema = $tool->getOutputSchema();
+
+            $outputErrors = $validator->validate($result, $outputSchema);
+
+            if ($outputErrors !== []) {
+                return [
+
+                    'error' => [
+
+                        'code' => 50001,
+
+                        'message' => 'Output validation failed',
+
+                        'details' => [ 'errors' => $outputErrors ],
+
+                    ],
+
+                ];
+            }
+
+
+
+            // Save to cache (if enabled for this method)
+
+            $this->cache->put($method, $cacheKey, $result);
+
+
+
+            $this->telemetry->emit('tool_executed', [
+
+                'method' => $method,
+
+                'durationMs' => (int)floor(microtime(true) * 1000) - $t0,
+
+            ]);
+
+
+
+            return [ 'result' => $result ];
+        }
+    }

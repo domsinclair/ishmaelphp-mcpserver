@@ -1,0 +1,111 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+if (getenv('ISH_MCP_DEBUG')) {
+    ini_set('display_errors', '1');
+    error_reporting(E_ALL);
+} else {
+    ini_set('display_errors', '0');
+    error_reporting(0);
+}
+
+$cwd = getcwd();
+$autoloadPaths = [
+    // Standalone / dev
+    __DIR__ . '/../vendor/autoload.php',
+    // Consumer app root
+    $cwd ? ($cwd . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php') : null,
+    // Nested layouts
+    __DIR__ . '/../../../../../autoload.php',
+    __DIR__ . '/../../../../../../autoload.php',
+];
+
+$autoloadPaths = array_values(array_filter($autoloadPaths));
+
+$loaded = false;
+foreach ($autoloadPaths as $path) {
+    if (is_file($path)) {
+        require $path;
+        $loaded = true;
+        break;
+    }
+}
+if (!$loaded) {
+    fwrite(STDERR, "[ish-mcp] Autoloader not found. Checked:\n  - " . implode("\n  - ", $autoloadPaths) . "\n" .
+        "Ensure you ran 'composer install' in the project root.\n");
+    exit(1);
+}
+
+use IshmaelPHP\McpServer\Protocol\StdioTransport;
+use IshmaelPHP\McpServer\Providers\StaticPromptProvider;
+use IshmaelPHP\McpServer\Providers\StaticResourceProvider;
+use IshmaelPHP\McpServer\Providers\AggregateResourceProvider;
+use IshmaelPHP\McpServer\Providers\DocsResourceProvider;
+use IshmaelPHP\McpServer\Providers\TemplatesResourceProvider;
+use IshmaelPHP\McpServer\Providers\PackageDocsResourceProvider;
+use IshmaelPHP\McpServer\Server\RequestRouter;
+use IshmaelPHP\McpServer\Server\Server;
+use IshmaelPHP\McpServer\Tools\HealthVersionTool;
+use IshmaelPHP\McpServer\Tools\ProjectInfoTool;
+use IshmaelPHP\McpServer\Tools\FeaturePackListTool;
+use IshmaelPHP\McpServer\Tools\FeaturePackCreateTool;
+use IshmaelPHP\McpServer\Tools\TestTool;
+use IshmaelPHP\McpServer\Tools\LintTool;
+use IshmaelPHP\McpServer\Tools\LogTailTool;
+use IshmaelPHP\McpServer\Tools\ContainerDescribeTool;
+use IshmaelPHP\McpServer\Tools\MigrateTool;
+use IshmaelPHP\McpServer\Tools\EnvValidateTool;
+use IshmaelPHP\McpServer\Tools\FeaturePackInstallTool;
+use IshmaelPHP\McpServer\Tools\FeaturePackIntegrateTool;
+use IshmaelPHP\McpServer\Project\ProjectContext;
+
+$version = require __DIR__ . '/../version.php';
+$transport = new StdioTransport();
+$router = new RequestRouter();
+$router->registerTool(new HealthVersionTool($version));
+
+$context = ProjectContext::discover();
+if ($context->getRoot() === null) {
+    fwrite(STDERR, "[ish-mcp] Warning: Ishmael project root not detected from CWD. Some tools may be limited.\n");
+}
+$router->registerTool(new ProjectInfoTool($context));
+$router->registerTool(new FeaturePackListTool($context));
+$router->registerTool(new FeaturePackCreateTool($context));
+$router->registerTool(new TestTool($context));
+$router->registerTool(new LintTool($context));
+$router->registerTool(new LogTailTool($context));
+$router->registerTool(new ContainerDescribeTool($context));
+$router->registerTool(new MigrateTool($context));
+$router->registerTool(new EnvValidateTool($context));
+$router->registerTool(new FeaturePackInstallTool($context));
+$router->registerTool(new FeaturePackIntegrateTool($context));
+
+$staticResources = new StaticResourceProvider([
+    ['id' => 'docs:feature-packs', 'description' => 'Ishmael Feature Packs overview'],
+    ['id' => 'docs:getting-started', 'description' => 'Getting started with Ishmael'],
+]);
+
+if ($context->getRoot() !== null && $context->getSandbox() !== null) {
+    $sandbox = $context->getSandbox();
+    $root = $context->getRoot();
+    $docsProvider = new DocsResourceProvider($sandbox, [
+        $root . DIRECTORY_SEPARATOR . 'Docs',
+        $root . DIRECTORY_SEPARATOR . 'site',
+    ]);
+    $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
+    $packagedDocs = new PackageDocsResourceProvider();
+    $resources = new AggregateResourceProvider([$staticResources, $docsProvider, $templatesProvider, $packagedDocs]);
+} else {
+    $packagedDocs = new PackageDocsResourceProvider();
+    $resources = new AggregateResourceProvider([$staticResources, $packagedDocs]);
+}
+$prompts = new StaticPromptProvider([
+    ['id' => 'scaffold:controller', 'description' => 'Guide to scaffold a controller (dry-run)'],
+    ['id' => 'prompt:generate-feature-pack', 'description' => 'Explain how to plan and author a new Feature Pack'],
+    ['id' => 'prompt:integrate-feature-pack', 'description' => 'Explain integration steps for Feature Packs and how to apply them safely'],
+]);
+
+$server = new Server($router, $transport, $resources, $prompts, $version);
+$server->run();
