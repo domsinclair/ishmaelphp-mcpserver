@@ -3,7 +3,6 @@
     "description": "Standalone Ishmael MCP (Model Context Protocol) Server",
     "type": "library",
     "license": "MIT",
-    "minimum-php": "8.2",
     "require": {
         "php": ">=8.2",
         "ext-json": "*"
@@ -24,6 +23,20 @@
     "bin": [
         "bin/ish-mcp"
     ],
+    "archive": {
+        "exclude": [
+            "/tests",
+            "/.github",
+            "/.idea",
+            "/.phpunit.cache",
+            "/phpunit.xml.dist",
+            "/.gitattributes",
+            "/.gitignore",
+            "/CONTRIBUTING.md",
+            "/CHANGELOG.md",
+            "/VERSION"
+        ]
+    },
     "scripts": {
         "test": "phpunit",
         "analyse": "phpstan analyse src",
