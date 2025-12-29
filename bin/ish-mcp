@@ -59,6 +59,7 @@ use Ishmael\McpServer\Tools\MigrateTool;
 use Ishmael\McpServer\Tools\EnvValidateTool;
 use Ishmael\McpServer\Tools\FeaturePackInstallTool;
 use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
+use Ishmael\McpServer\Tools\RoutesListTool;
 use Ishmael\McpServer\Project\ProjectContext;
 
 $version = require __DIR__ . '/../version.php';
@@ -81,6 +82,7 @@ $router->registerTool(new MigrateTool($context));
 $router->registerTool(new EnvValidateTool($context));
 $router->registerTool(new FeaturePackInstallTool($context));
 $router->registerTool(new FeaturePackIntegrateTool($context));
+$router->registerTool(new RoutesListTool($context));
 
 $staticResources = new StaticResourceProvider([
     ['id' => 'docs:feature-packs', 'description' => 'Ishmael Feature Packs overview'],
