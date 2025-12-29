@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.8](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.7...v0.7.8) (2025-12-29)
+
+
+### Bug Fixes
+
+* More work on route listings to the error envelope ([f41899a](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/f41899a2be8779ced785d16172946831792a6460))
+
 ## [0.7.7](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.6...v0.7.7) (2025-12-29)
 
 
