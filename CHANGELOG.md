@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.6](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.5...v0.7.6) (2025-12-29)
+
+
+### Bug Fixes
+
+* Route listing returns meet with canonical definitions ([a0ac5b2](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/a0ac5b2ee12d48336a70a23bc56902c2363f8335))
+
 ## [0.7.5](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.4...v0.7.5) (2025-12-29)
 
 
