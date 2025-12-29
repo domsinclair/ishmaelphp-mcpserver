@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace IshmaelPHP\McpServer\Tools;
+namespace Ishmael\McpServer\Tools;
 
-use IshmaelPHP\McpServer\Contracts\Tool;
-use IshmaelPHP\McpServer\FeaturePacks\CuratedIndexScanner;
-use IshmaelPHP\McpServer\FeaturePacks\LocalTemplateScanner;
-use IshmaelPHP\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Contracts\Tool;
+use Ishmael\McpServer\FeaturePacks\CuratedIndexScanner;
+use Ishmael\McpServer\FeaturePacks\LocalTemplateScanner;
+use Ishmael\McpServer\Project\ProjectContext;
 
 final class FeaturePackListTool implements Tool
 {

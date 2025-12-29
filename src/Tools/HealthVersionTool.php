@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace IshmaelPHP\McpServer\Tools;
+namespace Ishmael\McpServer\Tools;
 
-use IshmaelPHP\McpServer\Contracts\Tool;
+use Ishmael\McpServer\Contracts\Tool;
 
 final class HealthVersionTool implements Tool
 {

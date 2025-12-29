@@ -2,9 +2,9 @@
 
     declare(strict_types=1);
 
-    namespace IshmaelPHP\McpServer\Protocol;
+    namespace Ishmael\McpServer\Protocol;
 
-    use IshmaelPHP\McpServer\Support\ErrorEnvelope;
+    use Ishmael\McpServer\Support\ErrorEnvelope;
 
     /**
      * Minimal JSON Lines transport over stdio.

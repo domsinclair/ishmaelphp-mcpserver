@@ -6,33 +6,33 @@ declare(strict_types=1);
 
 
 
-use IshmaelPHP\McpServer\Protocol\StdioTransport;
+use Ishmael\McpServer\Protocol\StdioTransport;
 
-use IshmaelPHP\McpServer\Providers\AggregateResourceProvider;
+use Ishmael\McpServer\Providers\AggregateResourceProvider;
 
-use IshmaelPHP\McpServer\Providers\DocsResourceProvider;
+use Ishmael\McpServer\Providers\DocsResourceProvider;
 
-use IshmaelPHP\McpServer\Providers\PackageDocsResourceProvider;
+use Ishmael\McpServer\Providers\PackageDocsResourceProvider;
 
-use IshmaelPHP\McpServer\Providers\StaticPromptProvider;
+use Ishmael\McpServer\Providers\StaticPromptProvider;
 
-use IshmaelPHP\McpServer\Providers\StaticResourceProvider;
+use Ishmael\McpServer\Providers\StaticResourceProvider;
 
-use IshmaelPHP\McpServer\Providers\TemplatesResourceProvider;
+use Ishmael\McpServer\Providers\TemplatesResourceProvider;
 
-use IshmaelPHP\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Project\ProjectContext;
 
-use IshmaelPHP\McpServer\Server\RequestRouter;
+use Ishmael\McpServer\Server\RequestRouter;
 
-use IshmaelPHP\McpServer\Server\Server;
+use Ishmael\McpServer\Server\Server;
 
-use IshmaelPHP\McpServer\Tools\FeaturePackCreateTool;
+use Ishmael\McpServer\Tools\FeaturePackCreateTool;
 
-use IshmaelPHP\McpServer\Tools\FeaturePackListTool;
+use Ishmael\McpServer\Tools\FeaturePackListTool;
 
-use IshmaelPHP\McpServer\Tools\HealthVersionTool;
+use Ishmael\McpServer\Tools\HealthVersionTool;
 
-use IshmaelPHP\McpServer\Tools\ProjectInfoTool;
+use Ishmael\McpServer\Tools\ProjectInfoTool;
 
 use PHPUnit\Framework\TestCase;
 

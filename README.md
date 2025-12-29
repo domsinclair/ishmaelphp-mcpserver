@@ -11,7 +11,7 @@ The Ishmael MCP Server provides a standardised interface for AI models to intera
 Install via Composer:
 
 ```bash
-composer require ishmaelphp/mcp-server
+composer require ishmael/mcp-server
 ```
 
 ## Usage

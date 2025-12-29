@@ -2,9 +2,9 @@
 
     declare(strict_types=1);
 
-    namespace IshmaelPHP\McpServer\Providers;
+    namespace Ishmael\McpServer\Providers;
 
-    use IshmaelPHP\McpServer\Contracts\PromptProvider;
+    use Ishmael\McpServer\Contracts\PromptProvider;
 
     final class StaticPromptProvider implements PromptProvider
     {

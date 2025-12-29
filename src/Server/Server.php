@@ -2,15 +2,15 @@
 
     declare(strict_types=1);
 
-    namespace IshmaelPHP\McpServer\Server;
+    namespace Ishmael\McpServer\Server;
 
-    use IshmaelPHP\McpServer\Config\Settings;
-    use IshmaelPHP\McpServer\Contracts\PromptProvider;
-    use IshmaelPHP\McpServer\Contracts\ResourceProvider;
-    use IshmaelPHP\McpServer\Protocol\StdioTransport;
-    use IshmaelPHP\McpServer\Support\CancellationRegistry;
-    use IshmaelPHP\McpServer\Support\ErrorEnvelope;
-    use IshmaelPHP\McpServer\Support\Telemetry;
+    use Ishmael\McpServer\Config\Settings;
+    use Ishmael\McpServer\Contracts\PromptProvider;
+    use Ishmael\McpServer\Contracts\ResourceProvider;
+    use Ishmael\McpServer\Protocol\StdioTransport;
+    use Ishmael\McpServer\Support\CancellationRegistry;
+    use Ishmael\McpServer\Support\ErrorEnvelope;
+    use Ishmael\McpServer\Support\Telemetry;
 
     final class Server
     {

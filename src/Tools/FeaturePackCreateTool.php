@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace IshmaelPHP\McpServer\Tools;
+namespace Ishmael\McpServer\Tools;
 
-use IshmaelPHP\McpServer\Contracts\Tool;
-use IshmaelPHP\McpServer\Project\ProjectContext;
-use IshmaelPHP\McpServer\Project\PathSandbox;
+use Ishmael\McpServer\Contracts\Tool;
+use Ishmael\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Project\PathSandbox;
 
 final class FeaturePackCreateTool implements Tool
 {

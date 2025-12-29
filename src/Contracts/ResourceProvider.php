@@ -2,7 +2,7 @@
 
     declare(strict_types=1);
 
-    namespace IshmaelPHP\McpServer\Contracts;
+    namespace Ishmael\McpServer\Contracts;
 
     interface ResourceProvider
     {

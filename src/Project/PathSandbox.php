@@ -2,7 +2,7 @@
 
     declare(strict_types=1);
 
-    namespace IshmaelPHP\McpServer\Project;
+    namespace Ishmael\McpServer\Project;
 
     final class PathSandbox
     {

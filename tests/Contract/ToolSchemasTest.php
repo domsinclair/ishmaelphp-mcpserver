@@ -6,19 +6,19 @@ declare(strict_types=1);
 
 
 
-use IshmaelPHP\McpServer\Server\RequestRouter;
+use Ishmael\McpServer\Server\RequestRouter;
 
-use IshmaelPHP\McpServer\Tools\HealthVersionTool;
+use Ishmael\McpServer\Tools\HealthVersionTool;
 
-use IshmaelPHP\McpServer\Tools\FeaturePackListTool;
+use Ishmael\McpServer\Tools\FeaturePackListTool;
 
-use IshmaelPHP\McpServer\Tools\FeaturePackCreateTool;
+use Ishmael\McpServer\Tools\FeaturePackCreateTool;
 
-use IshmaelPHP\McpServer\Tools\ProjectInfoTool;
+use Ishmael\McpServer\Tools\ProjectInfoTool;
 
-use IshmaelPHP\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Project\ProjectContext;
 
-use IshmaelPHP\McpServer\Support\JsonSchemaValidator;
+use Ishmael\McpServer\Support\JsonSchemaValidator;
 
 use PHPUnit\Framework\TestCase;
 

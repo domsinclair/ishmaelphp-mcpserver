@@ -2,9 +2,9 @@
 
     declare(strict_types=1);
 
-    namespace IshmaelPHP\McpServer\FeaturePacks;
+    namespace Ishmael\McpServer\FeaturePacks;
 
-    use IshmaelPHP\McpServer\Project\PathSandbox;
+    use Ishmael\McpServer\Project\PathSandbox;
 
     /**
 

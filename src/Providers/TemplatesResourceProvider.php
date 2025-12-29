@@ -2,10 +2,10 @@
 
     declare(strict_types=1);
 
-    namespace IshmaelPHP\McpServer\Providers;
+    namespace Ishmael\McpServer\Providers;
 
-    use IshmaelPHP\McpServer\Contracts\ResourceProvider;
-    use IshmaelPHP\McpServer\Project\PathSandbox;
+    use Ishmael\McpServer\Contracts\ResourceProvider;
+    use Ishmael\McpServer\Project\PathSandbox;
 
     /**
 

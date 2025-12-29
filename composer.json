@@ -1,5 +1,5 @@
 {
-    "name": "ishmaelphp/mcp-server",
+    "name": "ishmael/mcp-server",
     "description": "Standalone Ishmael MCP (Model Context Protocol) Server",
     "type": "library",
     "license": "MIT",
@@ -13,12 +13,12 @@
     },
     "autoload": {
         "psr-4": {
-            "IshmaelPHP\\McpServer\\": "src/"
+            "Ishmael\\McpServer\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "IshmaelPHP\\McpServer\\Tests\\": "tests/"
+            "Ishmael\\McpServer\\Tests\\": "tests/"
         }
     },
     "bin": [

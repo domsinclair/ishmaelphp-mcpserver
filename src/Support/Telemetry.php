@@ -2,9 +2,9 @@
 
     declare(strict_types=1);
 
-    namespace IshmaelPHP\McpServer\Support;
+    namespace Ishmael\McpServer\Support;
 
-    use IshmaelPHP\McpServer\Config\Settings;
+    use Ishmael\McpServer\Config\Settings;
 
     final class Telemetry
     {

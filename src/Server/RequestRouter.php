@@ -2,14 +2,14 @@
 
     declare(strict_types=1);
 
-    namespace IshmaelPHP\McpServer\Server;
+    namespace Ishmael\McpServer\Server;
 
-    use IshmaelPHP\McpServer\Config\Settings;
-    use IshmaelPHP\McpServer\Contracts\Tool;
-    use IshmaelPHP\McpServer\Support\JsonSchemaValidator;
-    use IshmaelPHP\McpServer\Support\RateLimiter;
-    use IshmaelPHP\McpServer\Support\ResultCache;
-    use IshmaelPHP\McpServer\Support\Telemetry;
+    use Ishmael\McpServer\Config\Settings;
+    use Ishmael\McpServer\Contracts\Tool;
+    use Ishmael\McpServer\Support\JsonSchemaValidator;
+    use Ishmael\McpServer\Support\RateLimiter;
+    use Ishmael\McpServer\Support\ResultCache;
+    use Ishmael\McpServer\Support\Telemetry;
 
     final class RequestRouter
     {
