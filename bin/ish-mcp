@@ -66,7 +66,7 @@ $transport = new StdioTransport();
 $router = new RequestRouter();
 $router->registerTool(new HealthVersionTool($version));
 
-$context = ProjectContext::discover();
+$context = ProjectContext::discover(getenv('ISH_PROJECT_ROOT') ?: null);
 if ($context->getRoot() === null) {
     fwrite(STDERR, "[ish-mcp] Warning: Ishmael project root not detected from CWD. Some tools may be limited.\n");
 }
@@ -107,5 +107,5 @@ $prompts = new StaticPromptProvider([
     ['id' => 'prompt:integrate-feature-pack', 'description' => 'Explain integration steps for Feature Packs and how to apply them safely'],
 ]);
 
-$server = new Server($router, $transport, $resources, $prompts, $version);
+$server = new Server($router, $transport, $resources, $prompts);
 $server->run();

@@ -34,7 +34,8 @@
             "/.gitignore",
             "/CONTRIBUTING.md",
             "/CHANGELOG.md",
-            "/VERSION"
+            "/VERSION",
+            "/.release-please-manifest.json"
         ]
     },
     "scripts": {
