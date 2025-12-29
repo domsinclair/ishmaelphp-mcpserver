@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.4](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.3...v0.7.4) (2025-12-29)
+
+
+### Bug Fixes
+
+* Added route listing to the mcp server. ([afef9b2](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/afef9b2eff1a97ae98bf82cacd2534c7adb3e0ab))
+
 ## [0.7.3](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.2...v0.7.3) (2025-12-29)
 
 
