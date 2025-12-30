@@ -103,4 +103,18 @@ PHP;
         $this->assertEquals(1, $result['offset']);
         $this->assertTrue($result['truncated']);
     }
+
+    public function testExecuteHandlesFatalErrorGracefully(): void
+    {
+        // Use a mock to force a failure
+        $context = $this->createMock(ProjectContext::class);
+        $context->method('getRoot')->willThrowException(new \RuntimeException("Forced failure"));
+        
+        $tool = new RoutesListTool($context);
+        $result = $tool->execute([]);
+        
+        $this->assertArrayHasKey('error', $result);
+        $this->assertEquals(500, $result['error']['code']);
+        $this->assertStringContainsString('Forced failure', $result['error']['message']);
+    }
 }

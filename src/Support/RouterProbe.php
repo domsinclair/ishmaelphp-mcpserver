@@ -32,13 +32,13 @@ final class RouterProbe extends Router
     }
 
     // ——— Router API surface we need ———
-    public function get(string $path, $handler, array $middleware = []): self { return $this->add(['GET'], $path, $handler); }
-    public function post(string $path, $handler, array $middleware = []): self { return $this->add(['POST'], $path, $handler); }
-    public function put(string $path, $handler, array $middleware = []): self { return $this->add(['PUT'], $path, $handler); }
-    public function patch(string $path, $handler, array $middleware = []): self { return $this->add(['PATCH'], $path, $handler); }
-    public function delete(string $path, $handler, array $middleware = []): self { return $this->add(['DELETE'], $path, $handler); }
+    public function get(string $path, $handler, array $middleware = []): self { return $this->add(['GET'], $path, $handler, $middleware); }
+    public function post(string $path, $handler, array $middleware = []): self { return $this->add(['POST'], $path, $handler, $middleware); }
+    public function put(string $path, $handler, array $middleware = []): self { return $this->add(['PUT'], $path, $handler, $middleware); }
+    public function patch(string $path, $handler, array $middleware = []): self { return $this->add(['PATCH'], $path, $handler, $middleware); }
+    public function delete(string $path, $handler, array $middleware = []): self { return $this->add(['DELETE'], $path, $handler, $middleware); }
     public function any(string $path, $handler, array $middleware = []): self {
-        return $this->add(['GET','POST','PUT','PATCH','DELETE','OPTIONS','HEAD'], $path, $handler);
+        return $this->add(['GET','POST','PUT','PATCH','DELETE','OPTIONS','HEAD'], $path, $handler, $middleware);
     }
 
     /** Group support for prefixes (matches your anonymous collector behavior) */

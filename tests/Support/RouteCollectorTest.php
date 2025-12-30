@@ -160,4 +160,50 @@ PHP;
         $this->assertEquals('/admin/users/', $routes[1]['path']);
         $this->assertEquals('/admin/users/{id}', $routes[2]['path']);
     }
+
+    public function testResilienceToFailingRoutesFile(): void
+    {
+        // One good module
+        $goodPath = $this->tempRoot . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Good';
+        mkdir($goodPath, 0777, true);
+        file_put_contents($goodPath . DIRECTORY_SEPARATOR . 'routes.php', '<?php return ["good" => "GoodController@index"];');
+
+        // One bad module that throws
+        $badPath = $this->tempRoot . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Bad';
+        mkdir($badPath, 0777, true);
+        file_put_contents($badPath . DIRECTORY_SEPARATOR . 'routes.php', '<?php throw new \Exception("Boom");');
+
+        $context = new ProjectContext($this->tempRoot, null, []);
+        $collector = new RouteCollector($context);
+        
+        // Should not throw exception
+        $routes = $collector->collect();
+
+        // Should still contain routes from the good module
+        $this->assertCount(1, $routes);
+        $this->assertEquals('/good', $routes[0]['path']);
+    }
+
+    public function testResilienceToFailingClosure(): void
+    {
+        // One good module
+        $goodPath = $this->tempRoot . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Good';
+        mkdir($goodPath, 0777, true);
+        file_put_contents($goodPath . DIRECTORY_SEPARATOR . 'routes.php', '<?php return ["good" => "GoodController@index"];');
+
+        // One bad module that has a closure that throws
+        $badPath = $this->tempRoot . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'BadClosure';
+        mkdir($badPath, 0777, true);
+        file_put_contents($badPath . DIRECTORY_SEPARATOR . 'routes.php', '<?php return function($r) { throw new \Exception("Closure Boom"); };');
+
+        $context = new ProjectContext($this->tempRoot, null, []);
+        $collector = new RouteCollector($context);
+
+        // Should not throw exception
+        $routes = $collector->collect();
+
+        // Should still contain routes from the good module
+        $this->assertCount(1, $routes);
+        $this->assertEquals('/good', $routes[0]['path']);
+    }
 }

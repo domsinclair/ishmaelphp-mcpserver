@@ -4,7 +4,7 @@
 
     namespace Ishmael\McpServer\Project;
 
-    final class ProjectContext
+    class ProjectContext
     {
         private ?string $root;
 

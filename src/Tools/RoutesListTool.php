@@ -72,6 +72,35 @@ final class RoutesListTool implements Tool
         try {
             $collector = new RouteCollector($this->context);
             $routes = $collector->collect();
+
+            // Apply filtering
+            $filter = isset($input['filter']) && is_string($input['filter']) ? $input['filter'] : null;
+            if ($filter !== null && $filter !== '') {
+                $q = mb_strtolower($filter);
+                $routes = array_values(array_filter($routes, function($r) use ($q) {
+                    return mb_stripos($r['path'] . ' ' . $r['handler'], $q) !== false;
+                }));
+            }
+
+            // Deterministic sort: path then method
+            usort($routes, function($a, $b) {
+                return [$a['path'], $a['method']] <=> [$b['path'], $b['method']];
+            });
+
+            $total = count($routes);
+            $limit = max(1, (int)($input['limit'] ?? 2000));
+            $offset = max(0, (int)($input['offset'] ?? 0));
+
+            $slice = array_slice($routes, $offset, $limit);
+            $truncated = ($offset + $limit) < $total;
+
+            return [
+                'routes' => $slice,
+                'total' => $total,
+                'limit' => $limit,
+                'offset' => $offset,
+                'truncated' => $truncated,
+            ];
         } catch (\Throwable $e) {
             // Log to stderr and return a structured error that the Server can wrap
             fwrite(STDERR, "[RoutesListTool] Fatal error: " . $e->getMessage() . "\n");
@@ -82,34 +111,5 @@ final class RoutesListTool implements Tool
                 ],
             ];
         }
-
-        // Apply filtering
-        $filter = isset($input['filter']) && is_string($input['filter']) ? $input['filter'] : null;
-        if ($filter !== null && $filter !== '') {
-            $q = mb_strtolower($filter);
-            $routes = array_values(array_filter($routes, function($r) use ($q) {
-                return mb_stripos($r['path'] . ' ' . $r['handler'], $q) !== false;
-            }));
-        }
-
-        // Deterministic sort: path then method
-        usort($routes, function($a, $b) {
-            return [$a['path'], $a['method']] <=> [$b['path'], $b['method']];
-        });
-
-        $total = count($routes);
-        $limit = max(1, (int)($input['limit'] ?? 2000));
-        $offset = max(0, (int)($input['offset'] ?? 0));
-
-        $slice = array_slice($routes, $offset, $limit);
-        $truncated = ($offset + $limit) < $total;
-
-        return [
-            'routes' => $slice,
-            'total' => $total,
-            'limit' => $limit,
-            'offset' => $offset,
-            'truncated' => $truncated,
-        ];
     }
 }
