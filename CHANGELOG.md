@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.10](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.9...v0.7.10) (2025-12-30)
+
+
+### Bug Fixes
+
+* route probe altered to match router API surface ([66b208b](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/66b208bf2362bd3b067b142ed7b5f19c84efaf06))
+
 ## [0.7.9](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.8...v0.7.9) (2025-12-30)
 
 
