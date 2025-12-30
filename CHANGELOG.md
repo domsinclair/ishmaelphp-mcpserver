@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.9](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.8...v0.7.9) (2025-12-30)
+
+
+### Bug Fixes
+
+* route discovery resilience to error. ([3a7becf](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/3a7becfaf3bfd5803e353472952d5dacc51de07b))
+
 ## [0.7.8](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.7...v0.7.8) (2025-12-29)
 
 
