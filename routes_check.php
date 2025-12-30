@@ -1,17 +1,17 @@
 <?php
 if (!class_exists('Ishmael\Core\Router')) {
     eval('namespace Ishmael\Core { class Router { 
-        public static function group(array $options, callable $callback): void {
-            if (self::$active) { self::$active->group($options, $callback); }
-        }
-        private static ?Router $active = null;
-        public static function setActive(Router $r) { self::$active = $r; }
-        public function get(string $path, $handler, array $middleware = []): self { return $this; }
-        public function post(string $path, $handler, array $middleware = []): self { return $this; }
-        public function put(string $path, $handler, array $middleware = []): self { return $this; }
-        public function patch(string $path, $handler, array $middleware = []): self { return $this; }
-        public function delete(string $path, $handler, array $middleware = []): self { return $this; }
-        public function any(string $path, $handler, array $middleware = []): self { return $this; }
+        public static function group(array $options, callable $callback): void {}
+        public static function groupWithCsrf(array $options, callable $callback): void {}
+        public static function groupWithoutCsrf(array $options, callable $callback): void {}
+        public static function setActive($r) {}
+        public static function get(string $pattern, $handler, array $middleware = []) { return self::forwards()->add(["GET"], $pattern, $handler, $middleware); }
+        public static function post(string $pattern, $handler, array $middleware = []) { return self::forwards()->add(["POST"], $pattern, $handler, $middleware); }
+        public static function put(string $pattern, $handler, array $middleware = []) { return self::forwards()->add(["PUT"], $pattern, $handler, $middleware); }
+        public static function patch(string $pattern, $handler, array $middleware = []) { return self::forwards()->add(["PATCH"], $pattern, $handler, $middleware); }
+        public static function delete(string $pattern, $handler, array $middleware = []) { return self::forwards()->add(["DELETE"], $pattern, $handler, $middleware); }
+        public static function any(string $pattern, $handler, array $middleware = []) { return self::forwards()->add(["ANY"], $pattern, $handler, $middleware); }
+        private static function forwards() { return new self(); }
         public function name(string $name): self { return $this; }
         public function middleware(array $mw): self { return $this; }
         public function add(array $methods, string $path, $handler, array $middleware = []): self { return $this; }

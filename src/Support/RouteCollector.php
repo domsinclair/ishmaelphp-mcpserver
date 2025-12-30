@@ -100,12 +100,12 @@ final class RouteCollector
     private function processFluentClosure(\Closure $closure, string $moduleName): array
     {
         try {
-            $probe = RouterProbe::make($moduleName);
-            if (method_exists(\Ishmael\Core\Router::class, 'setActive')) {
-                \Ishmael\Core\Router::setActive($probe);
-            }
+            RouterProbe::begin($moduleName);
+            // Pass an instance to satisfy the type-hint if the closure expects it
+            $ref = new \ReflectionClass(RouterProbe::class);
+            $probe = $ref->newInstanceWithoutConstructor();
             $closure($probe);
-            return $probe->collected;
+            return RouterProbe::$collected;
         } catch (\Throwable $e) {
             fwrite(STDERR, "[RouteCollector] Error executing closure for {$moduleName}: " . $e->getMessage() . "\n");
             return [];

@@ -13,55 +13,96 @@ use Ishmael\Core\Router;
 final class RouterProbe extends Router
 {
     /** @var array<int, array{method:string,path:string,handler:string}> */
-    public array $collected = [];
+    public static array $collected = [];
 
-    private string $moduleName = '';
     /** @var string[] */
-    private array $groupStack = [];
+    private static array $groupStack = [];
 
     /**
-     * Create an instance without calling Router’s constructor.
+     * Start recording for a module.
      */
-    public static function make(string $moduleName): self
+    public static function begin(string $moduleName): void
     {
-        $ref = new \ReflectionClass(self::class);
-        /** @var self $obj */
-        $obj = $ref->newInstanceWithoutConstructor();
-        $obj->moduleName = $moduleName;
-        return $obj;
-    }
-
-    // ——— Router API surface we need ———
-    public function get(string $path, $handler, array $middleware = []): self { return $this->add(['GET'], $path, $handler, $middleware); }
-    public function post(string $path, $handler, array $middleware = []): self { return $this->add(['POST'], $path, $handler, $middleware); }
-    public function put(string $path, $handler, array $middleware = []): self { return $this->add(['PUT'], $path, $handler, $middleware); }
-    public function patch(string $path, $handler, array $middleware = []): self { return $this->add(['PATCH'], $path, $handler, $middleware); }
-    public function delete(string $path, $handler, array $middleware = []): self { return $this->add(['DELETE'], $path, $handler, $middleware); }
-    public function any(string $path, $handler, array $middleware = []): self {
-        return $this->add(['GET','POST','PUT','PATCH','DELETE','OPTIONS','HEAD'], $path, $handler, $middleware);
-    }
-
-    /** Group support for prefixes (matches your anonymous collector behavior) */
-    public static function group(array $options, callable $callback): void
-    {
-        // Find the active instance to delegate to
-        $ref = new \ReflectionClass(Router::class);
-        $prop = $ref->getProperty('active');
-        $prop->setAccessible(true);
-        $active = $prop->getValue();
-
-        if ($active instanceof self) {
-            $active->instanceGroup($options, $callback);
+        self::$collected = [];
+        self::$groupStack = [];
+        if (method_exists(Router::class, 'setActive')) {
+            Router::setActive(self::instance());
         }
     }
 
     /**
-     * Use __call to catch instance calls to group if we can't override it easily.
-     * Actually, if we define it as static, we can't easily get the instance.
+     * Internal singleton-ish instance to handle both static and instance calls.
+     */
+    private static function instance(): self
+    {
+        static $inst = null;
+        if (!$inst) {
+            $ref = new \ReflectionClass(self::class);
+            $inst = $ref->newInstanceWithoutConstructor();
+        }
+        return $inst;
+    }
+
+    // ——— Router API surface (must match signatures in Ishmael\Core\Router) ———
+
+    /** @return self */
+    public static function get(string $pattern, $handler, array $middleware = []): Router
+    {
+        return self::instance()->add(['GET'], $pattern, $handler, $middleware);
+    }
+
+    /** @return self */
+    public static function post(string $pattern, $handler, array $middleware = []): Router
+    {
+        return self::instance()->add(['POST'], $pattern, $handler, $middleware);
+    }
+
+    /** @return self */
+    public static function put(string $pattern, $handler, array $middleware = []): Router
+    {
+        return self::instance()->add(['PUT'], $pattern, $handler, $middleware);
+    }
+
+    /** @return self */
+    public static function patch(string $pattern, $handler, array $middleware = []): Router
+    {
+        return self::instance()->add(['PATCH'], $pattern, $handler, $middleware);
+    }
+
+    /** @return self */
+    public static function delete(string $pattern, $handler, array $middleware = []): Router
+    {
+        return self::instance()->add(['DELETE'], $pattern, $handler, $middleware);
+    }
+
+    /** @return self */
+    public static function any(string $pattern, $handler, array $middleware = []): Router
+    {
+        return self::instance()->add(['GET','POST','PUT','PATCH','DELETE','OPTIONS','HEAD'], $pattern, $handler, $middleware);
+    }
+
+    /** Group support for prefixes (matches Ishmael collector behavior) */
+    public static function group(array $options, callable $callback): void
+    {
+        self::instance()->instanceGroup($options, $callback);
+    }
+
+    public static function groupWithCsrf(array $options, callable $callback): void
+    {
+        self::group($options, $callback);
+    }
+
+    public static function groupWithoutCsrf(array $options, callable $callback): void
+    {
+        self::group($options, $callback);
+    }
+
+    /**
+     * Use __call to catch instance calls to group/middleware if they exist in base Router.
      */
     public function __call(string $name, array $arguments)
     {
-        if ($name === 'group' || $name === 'groupWithCsrf' || $name === 'groupWithoutCsrf') {
+        if (in_array($name, ['group', 'groupWithCsrf', 'groupWithoutCsrf'], true)) {
             return $this->instanceGroup(...$arguments);
         }
         return $this;
@@ -70,23 +111,22 @@ final class RouterProbe extends Router
     private function instanceGroup(array $options, callable $callback): void
     {
         $prefix = $options['prefix'] ?? '';
-        $current = end($this->groupStack) ?: '';
+        $current = end(self::$groupStack) ?: '';
         $newPrefix = rtrim($current, '/') . '/' . ltrim($prefix, '/');
-        $this->groupStack[] = $newPrefix;
+        self::$groupStack[] = $newPrefix;
         $callback($this);
-        array_pop($this->groupStack);
+        array_pop(self::$groupStack);
     }
 
-    // Since we extend Router, we should probably override the methods properly.
-    // Router.php has many static methods that forward to an 'active' instance.
-    // However, the fluent closure receives an instance of Router.
-
+    /**
+     * Core recording method.
+     */
     public function add(array $methods, string $path, $handler, array $middleware = []): self
     {
-        $current = end($this->groupStack) ?: '';
+        $current = end(self::$groupStack) ?: '';
         $fullPath = rtrim($current, '/') . '/' . ltrim($path, '/');
         foreach ($methods as $method) {
-            $this->collected[] = [
+            self::$collected[] = [
                 'method' => (string)$method,
                 'path' => '/' . ltrim($fullPath, '/'),
                 'handler' => $this->normalizeHandler($handler),
@@ -97,6 +137,8 @@ final class RouterProbe extends Router
 
     public function name(string $name): self { return $this; }
     public function middleware(array $mw): self { return $this; }
+    public function withoutCsrf(): self { return $this; }
+    public function withCsrf(): self { return $this; }
 
     private function normalizeHandler($handler): string
     {
