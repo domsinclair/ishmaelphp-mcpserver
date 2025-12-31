@@ -69,6 +69,7 @@ use Ishmael\McpServer\Tools\FeaturePackInstallTool;
 use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
 use Ishmael\McpServer\Tools\RoutesListTool;
 use Ishmael\McpServer\Tools\FindUsagesTool;
+use Ishmael\McpServer\Tools\DocsSyncTool;
 use Ishmael\McpServer\Project\ProjectContext;
 
 use Ishmael\McpServer\Support\IshToolDiscoverer;
@@ -101,6 +102,7 @@ $router->registerTool(new FeaturePackInstallTool($context));
 $router->registerTool(new FeaturePackIntegrateTool($context));
 $router->registerTool(new RoutesListTool($context));
 $router->registerTool(new FindUsagesTool($context));
+$router->registerTool(new DocsSyncTool($context));
 
 // Dynamic discovery of Ishmael CLI tools from metadata
 $discoverer = new IshToolDiscoverer($context);
@@ -117,17 +119,14 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     $sandbox = $context->getSandbox();
     $root = $context->getRoot();
     $docsProvider = new DocsResourceProvider($sandbox, [
-        $root . DIRECTORY_SEPARATOR . 'Docs',
-        $root . DIRECTORY_SEPARATOR . 'site',
+        $root . DIRECTORY_SEPARATOR . 'Docs'
     ]);
     $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
-    $packagedDocs = new PackageDocsResourceProvider();
     $ishStubs = new IshStubsResourceProvider($sandbox, dirname($context->getIshBinary(), 2));
     $ishManifest = new IshManifestResourceProvider($context);
-    $resources = new AggregateResourceProvider([$staticResources, $docsProvider, $templatesProvider, $packagedDocs, $ishStubs, $ishManifest]);
+    $resources = new AggregateResourceProvider([$staticResources, $docsProvider, $templatesProvider, $ishStubs, $ishManifest]);
 } else {
-    $packagedDocs = new PackageDocsResourceProvider();
-    $resources = new AggregateResourceProvider([$staticResources, $packagedDocs]);
+    $resources = new AggregateResourceProvider([$staticResources]);
 }
 $prompts = new StaticPromptProvider([
     ['id' => 'scaffold:controller', 'description' => 'Guide to scaffold a controller (dry-run)'],

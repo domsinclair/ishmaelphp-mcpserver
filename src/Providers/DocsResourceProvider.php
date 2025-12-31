@@ -77,6 +77,10 @@
 
         public function readResource(string $uri): ?string
         {
+            if (!str_starts_with($uri, 'docs:')) {
+                return null;
+            }
+
             $resources = $this->listResources();
             foreach ($resources as $res) {
                 if ($res['uri'] === $uri && isset($res['path']) && is_file($res['path'])) {
@@ -86,63 +90,50 @@
             return null;
         }
 
-
-
         /** @param array<int, array<string,mixed>> $items */
-
         private function scanDocsRoot(string $root, array &$items): void
         {
+            if (!is_dir($root)) {
+                return;
+            }
 
-            // Shallow scan: list top-level markdown in Docs, and top-level index.html in site subsections
+            $directory = new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS);
+            $iterator = new \RecursiveIteratorIterator($directory);
 
-            $iterator = @scandir($root) ?: [];
-
-            foreach ($iterator as $name) {
-                if ($name === '.' || $name === '..') {
+            foreach ($iterator as $file) {
+                /** @var \SplFileInfo $file */
+                if ($file->isDir()) {
                     continue;
                 }
 
-                $path = $root . DIRECTORY_SEPARATOR . $name;
+                $path = $file->getPathname();
+                $relPath = str_replace($root . DIRECTORY_SEPARATOR, '', $path);
+                $uriPath = str_replace(DIRECTORY_SEPARATOR, '/', $relPath);
 
-                if (is_dir($path)) {
-                    // For site/, expose section index.html if present
-
-                    $index = $path . DIRECTORY_SEPARATOR . 'index.html';
-
-                    if (is_file($index)) {
-                        $section = strtolower($name);
-
-                        $items[] = [
-
-                            'uri' => 'docs:' . $section,
-
-                            'name' => 'Documentation section: ' . $name,
-
-                            'description' => 'Documentation section: ' . $name,
-
-                            'path' => $index,
-
-                        ];
+                // Handle Markdown files
+                if (preg_match('~\.md$~i', $relPath) === 1) {
+                    $slug = strtolower(preg_replace('~\.md$~i', '', $uriPath));
+                    
+                    $items[] = [
+                        'uri' => 'docs:' . $slug,
+                        'name' => basename($relPath),
+                        'description' => 'Documentation: ' . $relPath,
+                        'mimeType' => 'text/markdown',
+                        'path' => $path,
+                    ];
+                } 
+                // Handle site/ index.html files if we still want to support them
+                elseif (basename($path) === 'index.html') {
+                    $slug = strtolower(dirname($uriPath));
+                    if ($slug === '.') {
+                         $slug = 'index';
                     }
 
-                    continue;
-                }
-
-                // Markdown files under Docs root
-
-                if (preg_match('~\.md$~i', $name) === 1) {
-                    $slug = strtolower(preg_replace('~\.[^.]+$~', '', $name) ?? $name);
-
                     $items[] = [
-
                         'uri' => 'docs:' . $slug,
-
-                        'name' => 'Doc: ' . $name,
-
-                        'description' => 'Doc: ' . $name,
-
+                        'name' => 'Documentation section: ' . dirname($relPath),
+                        'description' => 'Documentation section: ' . dirname($relPath),
                         'path' => $path,
-
                     ];
                 }
             }
