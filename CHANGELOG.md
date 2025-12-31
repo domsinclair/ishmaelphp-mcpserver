@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.11](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.10...v0.7.11) (2025-12-31)
+
+
+### Bug Fixes
+
+* cli integration ([00b857f](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/00b857f30fc3206123b6e1b9578f25380a8d09f4))
+
 ## [0.7.10](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.9...v0.7.10) (2025-12-30)
 
 
