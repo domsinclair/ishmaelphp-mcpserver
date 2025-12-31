@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.12](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.11...v0.7.12) (2025-12-31)
+
+
+### Bug Fixes
+
+* Documentation updates fixed to get latest. ([9c80130](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/9c80130a68401f18281f3c7e8b1fbce191a48265))
+
 ## [0.7.11](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.10...v0.7.11) (2025-12-31)
 
 
