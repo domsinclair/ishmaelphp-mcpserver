@@ -67,10 +67,23 @@
             $byId = [];
 
             foreach ($items as $it) {
-                $byId[$it['id']] = $it;
+                $byId[$it['uri']] = $it;
             }
 
             return array_values($byId);
+        }
+
+
+
+        public function readResource(string $uri): ?string
+        {
+            $resources = $this->listResources();
+            foreach ($resources as $res) {
+                if ($res['uri'] === $uri && isset($res['path']) && is_file($res['path'])) {
+                    return file_get_contents($res['path']);
+                }
+            }
+            return null;
         }
 
 
@@ -101,7 +114,9 @@
 
                         $items[] = [
 
-                            'id' => 'docs:' . $section,
+                            'uri' => 'docs:' . $section,
+
+                            'name' => 'Documentation section: ' . $name,
 
                             'description' => 'Documentation section: ' . $name,
 
@@ -120,7 +135,9 @@
 
                     $items[] = [
 
-                        'id' => 'docs:' . $slug,
+                        'uri' => 'docs:' . $slug,
+
+                        'name' => 'Doc: ' . $name,
 
                         'description' => 'Doc: ' . $name,
 

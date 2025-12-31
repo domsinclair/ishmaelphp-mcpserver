@@ -54,8 +54,8 @@
                 if (is_dir($path)) {
                     $items[] = [
 
-                        'id' => 'templates:' . strtolower($name),
-
+                        'uri' => 'templates:' . strtolower($name),
+                        'name' => 'Template pack: ' . $name,
                         'description' => 'Template pack: ' . $name,
 
                         'path' => $path,
@@ -65,5 +65,12 @@
             }
 
             return $items;
+        }
+
+
+
+        public function readResource(string $uri): ?string
+        {
+            return null; // Directories cannot be read directly as strings
         }
     }

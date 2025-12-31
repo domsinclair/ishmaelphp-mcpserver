@@ -19,7 +19,7 @@ final class RoutesListTool implements Tool
 
     public function getName(): string
     {
-        return 'ish:routes:list';
+        return 'ish:listRoutes';
     }
 
     public function getDescription(): string
@@ -70,7 +70,7 @@ final class RoutesListTool implements Tool
     public function execute(array $input): array
     {
         try {
-            $collector = new RouteCollector($this->context);
+            $collector = new RouteCollector($this->context, true);
             $routes = $collector->collect();
 
             // Apply filtering

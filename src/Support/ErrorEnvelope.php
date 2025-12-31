@@ -24,62 +24,46 @@
 
         public static function success($id, array $payload, array $meta = []): array
         {
-
-            return [
-
+            $response = [
                 'id' => $id,
-
                 'version' => self::VERSION,
-
                 'result' => $payload,
-
-                'error' => null,
-
-                'meta' => $meta,
-
             ];
+
+            if ($meta !== []) {
+                $response['meta'] = $meta;
+            }
+
+            return $response;
         }
 
-
-
         /**
-
          * Build a standardized error envelope.
-
          * @param mixed $id
-
          * @param int $code
-
          * @param string $message
-
          * @param array<string,mixed>|null $details
-
          * @param array<string,mixed> $meta
-
          */
-
         public static function error($id, int $code, string $message, ?array $details = null, array $meta = []): array
         {
-
             $err = [ 'code' => $code, 'message' => $message ];
 
             if ($details !== null) {
                 $err['details'] = self::redact($details);
             }
 
-            return [
-
+            $response = [
                 'id' => $id,
-
                 'version' => self::VERSION,
-
-                'result' => null,
-
                 'error' => $err,
-
-                'meta' => $meta,
-
             ];
+
+            if ($meta !== []) {
+                $response['meta'] = $meta;
+            }
+
+            return $response;
         }
 
 

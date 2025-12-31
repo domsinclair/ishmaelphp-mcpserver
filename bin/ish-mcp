@@ -45,6 +45,8 @@ use Ishmael\McpServer\Providers\AggregateResourceProvider;
 use Ishmael\McpServer\Providers\DocsResourceProvider;
 use Ishmael\McpServer\Providers\TemplatesResourceProvider;
 use Ishmael\McpServer\Providers\PackageDocsResourceProvider;
+use Ishmael\McpServer\Providers\IshStubsResourceProvider;
+use Ishmael\McpServer\Providers\IshManifestResourceProvider;
 use Ishmael\McpServer\Server\RequestRouter;
 use Ishmael\McpServer\Server\Server;
 use Ishmael\McpServer\Tools\HealthVersionTool;
@@ -56,11 +58,20 @@ use Ishmael\McpServer\Tools\LintTool;
 use Ishmael\McpServer\Tools\LogTailTool;
 use Ishmael\McpServer\Tools\ContainerDescribeTool;
 use Ishmael\McpServer\Tools\MigrateTool;
+use Ishmael\McpServer\Tools\MakeModuleTool;
+use Ishmael\McpServer\Tools\MakeControllerTool;
+use Ishmael\McpServer\Tools\MakeServiceTool;
+use Ishmael\McpServer\Tools\MakeMigrationTool;
+use Ishmael\McpServer\Tools\MakeResourceTool;
+use Ishmael\McpServer\Tools\MakeViewTool;
 use Ishmael\McpServer\Tools\EnvValidateTool;
 use Ishmael\McpServer\Tools\FeaturePackInstallTool;
 use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
 use Ishmael\McpServer\Tools\RoutesListTool;
+use Ishmael\McpServer\Tools\FindUsagesTool;
 use Ishmael\McpServer\Project\ProjectContext;
+
+use Ishmael\McpServer\Support\IshToolDiscoverer;
 
 $version = require __DIR__ . '/../version.php';
 $transport = new StdioTransport();
@@ -79,10 +90,23 @@ $router->registerTool(new LintTool($context));
 $router->registerTool(new LogTailTool($context));
 $router->registerTool(new ContainerDescribeTool($context));
 $router->registerTool(new MigrateTool($context));
+$router->registerTool(new MakeModuleTool($context));
+$router->registerTool(new MakeControllerTool($context));
+$router->registerTool(new MakeServiceTool($context));
+$router->registerTool(new MakeMigrationTool($context));
+$router->registerTool(new MakeResourceTool($context));
+$router->registerTool(new MakeViewTool($context));
 $router->registerTool(new EnvValidateTool($context));
 $router->registerTool(new FeaturePackInstallTool($context));
 $router->registerTool(new FeaturePackIntegrateTool($context));
 $router->registerTool(new RoutesListTool($context));
+$router->registerTool(new FindUsagesTool($context));
+
+// Dynamic discovery of Ishmael CLI tools from metadata
+$discoverer = new IshToolDiscoverer($context);
+foreach ($discoverer->discover() as $dynamicTool) {
+    $router->registerTool($dynamicTool);
+}
 
 $staticResources = new StaticResourceProvider([
     ['id' => 'docs:feature-packs', 'description' => 'Ishmael Feature Packs overview'],
@@ -98,7 +122,9 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     ]);
     $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
     $packagedDocs = new PackageDocsResourceProvider();
-    $resources = new AggregateResourceProvider([$staticResources, $docsProvider, $templatesProvider, $packagedDocs]);
+    $ishStubs = new IshStubsResourceProvider($sandbox, dirname($context->getIshBinary(), 2));
+    $ishManifest = new IshManifestResourceProvider($context);
+    $resources = new AggregateResourceProvider([$staticResources, $docsProvider, $templatesProvider, $packagedDocs, $ishStubs, $ishManifest]);
 } else {
     $packagedDocs = new PackageDocsResourceProvider();
     $resources = new AggregateResourceProvider([$staticResources, $packagedDocs]);

@@ -6,13 +6,12 @@ namespace Ishmael\McpServer\Tools;
 
 use Ishmael\McpServer\Contracts\Tool;
 use Ishmael\McpServer\Project\ProjectContext;
-
 use Ishmael\McpServer\Support\IshCliBridge;
 
 /**
- * ish:migrate — Apply/rollback migrations using the native CLI.
+ * ish:make:view — Create a view.
  */
-final class MigrateTool implements Tool
+final class MakeViewTool implements Tool
 {
     private ProjectContext $context;
 
@@ -23,12 +22,12 @@ final class MigrateTool implements Tool
 
     public function getName(): string
     {
-        return 'ish:migrate';
+        return 'ish:make:view';
     }
 
     public function getDescription(): string
     {
-        return 'Apply or rollback migrations using the native Ishmael CLI.';
+        return 'Create a specific view file (e.g., blog/show).';
     }
 
     public function getInputSchema(): array
@@ -36,11 +35,11 @@ final class MigrateTool implements Tool
         return [
             'type' => 'object',
             'additionalProperties' => false,
+            'required' => ['module', 'path'],
             'properties' => [
-                'action' => ['type' => 'string', 'enum' => ['apply', 'rollback'], 'default' => 'apply'],
-                'module' => ['type' => ['string', 'null']],
-                'steps' => ['type' => ['integer', 'null']],
-                'pretend' => ['type' => 'boolean', 'default' => false],
+                'module' => ['type' => 'string', 'description' => 'Target module name.'],
+                'path' => ['type' => 'string', 'description' => 'View path (e.g., blog/show).'],
+                'templates' => ['type' => ['string', 'null'], 'description' => 'Override template source directory.'],
             ],
         ];
     }
@@ -49,38 +48,37 @@ final class MigrateTool implements Tool
     {
         return [
             'type' => 'object',
-            'required' => ['success', 'output'],
+            'required' => ['success', 'output', 'files'],
             'properties' => [
                 'success' => ['type' => 'boolean'],
                 'output' => ['type' => 'string'],
                 'error' => ['type' => ['string', 'null']],
+                'files' => [
+                    'type' => 'array',
+                    'items' => ['type' => 'string'],
+                    'description' => 'Absolute paths of created files.'
+                ],
             ],
         ];
     }
 
     public function execute(array $input): array
     {
-        $action = $input['action'] ?? 'apply';
-        $cmd = ($action === 'rollback') ? 'migrate:rollback' : 'migrate';
-
+        $module = $input['module'];
+        $path = $input['path'];
         $options = [];
-        if (isset($input['module'])) {
-            $options['module'] = $input['module'];
-        }
-        if (isset($input['steps'])) {
-            $options['steps'] = $input['steps'];
-        }
-        if (!empty($input['pretend'])) {
-            $options['pretend'] = true;
+        if (isset($input['templates'])) {
+            $options['templates'] = $input['templates'];
         }
 
         $bridge = new IshCliBridge($this->context);
-        $result = $bridge->execute($cmd, $options);
+        $result = $bridge->execute('make:view', $options, [$module, $path]);
 
         return [
             'success' => $result['success'],
             'output' => $result['output'],
             'error' => $result['error'],
+            'files' => $result['files'],
         ];
     }
 }

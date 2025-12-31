@@ -47,18 +47,18 @@
                 }
 
                 foreach ($list as $item) {
-                    if (!is_array($item) || !isset($item['id'])) {
+                    if (!is_array($item)) {
                         continue;
                     }
 
-                    // Preserve the first occurrence of a resource id so earlier providers
+                    $key = $item['uri'] ?? $item['id'] ?? null;
+                    if ($key === null) {
+                        continue;
+                    }
 
-                    // (e.g., explicit static resources in tests) are not overridden by later
-
-                    // providers that might add extra fields (like path) or different descriptions.
-
-                    if (!array_key_exists($item['id'], $all)) {
-                        $all[$item['id']] = $item; // de-dupe by id
+                    // de-dupe by uri or id
+                    if (!array_key_exists($key, $all)) {
+                        $all[$key] = $item;
                     }
                 }
             }
@@ -66,5 +66,18 @@
             // return numeric-indexed array
 
             return array_values($all);
+        }
+
+
+
+        public function readResource(string $uri): ?string
+        {
+            foreach ($this->providers as $provider) {
+                $content = $provider->readResource($uri);
+                if ($content !== null) {
+                    return $content;
+                }
+            }
+            return null;
         }
     }

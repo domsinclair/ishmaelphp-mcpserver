@@ -13,10 +13,12 @@ use Ishmael\McpServer\Support\RouterProbe;
 final class RouteCollector
 {
     private ProjectContext $context;
+    private bool $throwOnError;
 
-    public function __construct(ProjectContext $context)
+    public function __construct(ProjectContext $context, bool $throwOnError = false)
     {
         $this->context = $context;
+        $this->throwOnError = $throwOnError;
     }
 
     /**
@@ -63,6 +65,9 @@ final class RouteCollector
                 return include $file;
             })($file);
         } catch (\Throwable $e) {
+            if ($this->throwOnError) {
+                throw $e;
+            }
             fwrite(STDERR, "[RouteCollector] Error including {$file}: " . $e->getMessage() . "\n");
             return [];
         }
@@ -107,6 +112,9 @@ final class RouteCollector
             $closure($probe);
             return RouterProbe::$collected;
         } catch (\Throwable $e) {
+            if ($this->throwOnError) {
+                throw $e;
+            }
             fwrite(STDERR, "[RouteCollector] Error executing closure for {$moduleName}: " . $e->getMessage() . "\n");
             return [];
         }

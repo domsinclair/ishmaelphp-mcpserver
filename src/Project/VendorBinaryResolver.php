@@ -45,7 +45,7 @@
         public function resolveAll(): array
         {
 
-            $names = ['phpunit', 'phpstan', 'phpcs'];
+            $names = ['phpunit', 'phpstan', 'phpcs', 'ish'];
 
             $out = [];
 
@@ -68,6 +68,11 @@
             $base = $this->vendorBin . DIRECTORY_SEPARATOR . $name;
 
             $paths[] = $base;
+
+            // bin/ish in root (for Ishmael Framework projects)
+            if ($name === 'ish') {
+                $paths[] = $this->root . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'ish';
+            }
 
             // Windows .bat shims created by Composer
 

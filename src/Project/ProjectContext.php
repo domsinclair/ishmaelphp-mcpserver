@@ -89,4 +89,11 @@
 
             return $this->binaries;
         }
+
+
+
+        public function getIshBinary(): ?string
+        {
+            return $this->binaries['ish'] ?? null;
+        }
     }

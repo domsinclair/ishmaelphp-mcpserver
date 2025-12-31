@@ -104,6 +104,15 @@
                     case 'listPrompts':
                         $response = ['result' => [ 'prompts' => $this->prompts->listPrompts() ]];
                         break;
+                    case 'resources/read':
+                        $uri = (string)($params['uri'] ?? '');
+                        $content = $this->resources->readResource($uri);
+                        if ($content !== null) {
+                            $response = ['result' => [ 'contents' => [['uri' => $uri, 'text' => $content]] ]];
+                        } else {
+                            $response = ['error' => [ 'code' => -32602, 'message' => "Resource not found: {$uri}" ]];
+                        }
+                        break;
                     default:
                         $response = $this->router->dispatch($method, $params);
                 }

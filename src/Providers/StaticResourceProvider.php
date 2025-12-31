@@ -33,4 +33,11 @@
 
             return $this->resources;
         }
+
+
+
+        public function readResource(string $uri): ?string
+        {
+            return null;
+        }
     }
