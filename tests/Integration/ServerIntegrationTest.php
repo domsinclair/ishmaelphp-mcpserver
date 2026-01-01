@@ -80,30 +80,15 @@ final class ServerIntegrationTest extends TestCase
 
             $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
 
-            $packagedDocs = new PackageDocsResourceProvider();
-
             $resources = new AggregateResourceProvider([
-
                 new StaticResourceProvider([]),
-
                 $docsProvider,
-
                 $templatesProvider,
-
-                $packagedDocs
-
             ]);
-
         } else {
-
             $resources = new AggregateResourceProvider([
-
                 new StaticResourceProvider([]),
-
-                new PackageDocsResourceProvider(),
-
             ]);
-
         }
 
         $prompts = new StaticPromptProvider([]);

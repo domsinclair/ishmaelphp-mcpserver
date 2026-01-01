@@ -47,6 +47,9 @@ use Ishmael\McpServer\Providers\TemplatesResourceProvider;
 use Ishmael\McpServer\Providers\PackageDocsResourceProvider;
 use Ishmael\McpServer\Providers\IshStubsResourceProvider;
 use Ishmael\McpServer\Providers\IshManifestResourceProvider;
+use Ishmael\McpServer\Providers\IshCliMetadataResourceProvider;
+use Ishmael\McpServer\Providers\IshHealthResourceProvider;
+use Ishmael\McpServer\Providers\AiContextResourceProvider;
 use Ishmael\McpServer\Server\RequestRouter;
 use Ishmael\McpServer\Server\Server;
 use Ishmael\McpServer\Tools\HealthVersionTool;
@@ -65,11 +68,14 @@ use Ishmael\McpServer\Tools\MakeMigrationTool;
 use Ishmael\McpServer\Tools\MakeResourceTool;
 use Ishmael\McpServer\Tools\MakeViewTool;
 use Ishmael\McpServer\Tools\EnvValidateTool;
+use Ishmael\McpServer\Tools\SetupRunConfigsTool;
 use Ishmael\McpServer\Tools\FeaturePackInstallTool;
 use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
 use Ishmael\McpServer\Tools\RoutesListTool;
 use Ishmael\McpServer\Tools\FindUsagesTool;
 use Ishmael\McpServer\Tools\DocsSyncTool;
+use Ishmael\McpServer\Prompts\BestPracticesPrompt;
+use Ishmael\McpServer\Prompts\SetupProjectPrompt;
 use Ishmael\McpServer\Project\ProjectContext;
 
 use Ishmael\McpServer\Support\IshToolDiscoverer;
@@ -98,6 +104,7 @@ $router->registerTool(new MakeMigrationTool($context));
 $router->registerTool(new MakeResourceTool($context));
 $router->registerTool(new MakeViewTool($context));
 $router->registerTool(new EnvValidateTool($context));
+$router->registerTool(new SetupRunConfigsTool($context));
 $router->registerTool(new FeaturePackInstallTool($context));
 $router->registerTool(new FeaturePackIntegrateTool($context));
 $router->registerTool(new RoutesListTool($context));
@@ -124,15 +131,33 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
     $ishStubs = new IshStubsResourceProvider($sandbox, dirname($context->getIshBinary(), 2));
     $ishManifest = new IshManifestResourceProvider($context);
-    $resources = new AggregateResourceProvider([$staticResources, $docsProvider, $templatesProvider, $ishStubs, $ishManifest]);
+    $cliMetadata = new IshCliMetadataResourceProvider($context);
+    $projectHealth = new IshHealthResourceProvider($context);
+    $aiContext = new AiContextResourceProvider($context);
+
+    $resources = new AggregateResourceProvider([
+        $staticResources,
+        $docsProvider,
+        $templatesProvider,
+        $ishStubs,
+        $ishManifest,
+        $cliMetadata,
+        $projectHealth,
+        $aiContext
+    ]);
 } else {
     $resources = new AggregateResourceProvider([$staticResources]);
 }
+$bestPractices = new BestPracticesPrompt();
+$setupProject = new SetupProjectPrompt();
+
 $prompts = new StaticPromptProvider([
+    ['id' => $bestPractices->getName(), 'description' => $bestPractices->getDescription()],
+    ['id' => $setupProject->getName(), 'description' => $setupProject->getDescription()],
     ['id' => 'scaffold:controller', 'description' => 'Guide to scaffold a controller (dry-run)'],
     ['id' => 'prompt:generate-feature-pack', 'description' => 'Explain how to plan and author a new Feature Pack'],
     ['id' => 'prompt:integrate-feature-pack', 'description' => 'Explain integration steps for Feature Packs and how to apply them safely'],
-]);
+], [$bestPractices, $setupProject]);
 
 $server = new Server($router, $transport, $resources, $prompts);
 $server->run();

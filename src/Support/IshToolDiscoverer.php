@@ -28,9 +28,15 @@ final class IshToolDiscoverer
 
         $metadataPath = $root . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cli_commands.json';
         if (!is_file($metadataPath)) {
-            // Maybe try to generate it by running a dummy ish command if possible, 
-            // but bin/ish says it persists metadata on every run.
-            return [];
+            // Try to generate it by running an ish command that triggers metadata persistence.
+            // In Ishmael, bin/ish usually persists metadata on every run.
+            // We can run 'help' to trigger it.
+            $bridge = new IshCliBridge($this->context);
+            $bridge->execute('help');
+            
+            if (!is_file($metadataPath)) {
+                return [];
+            }
         }
 
         $data = json_decode(file_get_contents($metadataPath), true);

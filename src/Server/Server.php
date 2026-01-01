@@ -104,6 +104,21 @@
                     case 'listPrompts':
                         $response = ['result' => [ 'prompts' => $this->prompts->listPrompts() ]];
                         break;
+                    case 'prompts/get':
+                        $name = (string)($params['name'] ?? '');
+                        $args = is_array($params['arguments'] ?? null) ? $params['arguments'] : [];
+                        $prompt = $this->prompts->getPrompt($name, $args);
+                        if ($prompt !== null) {
+                            $response = [
+                                'result' => [
+                                    'description' => $prompt->getDescription(),
+                                    'messages' => $prompt->getMessages()
+                                ]
+                            ];
+                        } else {
+                            $response = ['error' => [ 'code' => -32602, 'message' => "Prompt not found: {$name}" ]];
+                        }
+                        break;
                     case 'resources/read':
                         $uri = (string)($params['uri'] ?? '');
                         $content = $this->resources->readResource($uri);
