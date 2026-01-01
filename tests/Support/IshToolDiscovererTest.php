@@ -68,6 +68,34 @@ final class IshToolDiscovererTest extends TestCase
         $this->assertEquals('string', $schema['properties']['name']['type']);
     }
 
+    public function testDiscoverSkipsDedicatedCommands(): void
+    {
+        $storageDir = $this->tempRoot . DIRECTORY_SEPARATOR . 'storage';
+        mkdir($storageDir, 0777, true);
+        
+        $metadata = [
+            'generatedAt' => date('c'),
+            'commands' => [
+                [
+                    'name' => 'make:module',
+                    'description' => 'Should be skipped',
+                ],
+                [
+                    'name' => 'custom:command',
+                    'description' => 'Should be included',
+                ],
+            ],
+        ];
+        file_put_contents($storageDir . DIRECTORY_SEPARATOR . 'cli_commands.json', json_encode($metadata));
+
+        $context = new ProjectContext($this->tempRoot, null, []);
+        $discoverer = new IshToolDiscoverer($context);
+        $tools = $discoverer->discover();
+
+        $this->assertCount(1, $tools);
+        $this->assertEquals('ish:custom:command', $tools[0]->getName());
+    }
+
     public function testDiscoverReturnsEmptyWhenNoMetadata(): void
     {
         $context = new ProjectContext($this->tempRoot, null, []);

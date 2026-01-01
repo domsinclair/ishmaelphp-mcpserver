@@ -11,7 +11,7 @@ use Ishmael\McpServer\Support\IshCliBridge;
 /**
  * A generic tool that wraps an arbitrary Ishmael CLI command based on discovered metadata.
  */
-final class DynamicIshTool implements Tool
+class DynamicIshTool implements Tool
 {
     private ProjectContext $context;
     private array $metadata;
@@ -42,6 +42,7 @@ final class DynamicIshTool implements Tool
             $optName = ltrim($opt['name'], '-');
             $description = $opt['description'] ?? '';
             $accepts = $opt['accepts'] ?? null;
+            $isOptional = $opt['optional'] ?? true;
 
             if ($accepts) {
                 $properties[$optName] = [
@@ -54,16 +55,42 @@ final class DynamicIshTool implements Tool
                     'description' => $description
                 ];
             }
+
+            if (!$isOptional) {
+                $required[] = $optName;
+            }
         }
 
-        // Also allow positional arguments if the description hints at them
-        // For now we'll just support options as defined in the registry
+        // Also handle positional arguments from metadata if they exist
+        $args = $this->metadata['arguments'] ?? [];
+        foreach ($args as $arg) {
+            $argName = $arg['name'] ?? null;
+            if (!$argName) continue;
+            
+            $description = $arg['description'] ?? '';
+            $isOptional = $arg['optional'] ?? true;
+            
+            $properties[$argName] = [
+                'type' => 'string',
+                'description' => $description
+            ];
+            
+            if (!$isOptional) {
+                $required[] = $argName;
+            }
+        }
         
-        return [
+        $schema = [
             'type' => 'object',
             'properties' => $properties,
-            'additionalProperties' => true, // Allow positional args or unknown options
+            'additionalProperties' => true,
         ];
+
+        if ($required !== []) {
+            $schema['required'] = $required;
+        }
+
+        return $schema;
     }
 
     public function getOutputSchema(): array

@@ -44,17 +44,37 @@ final class IshToolDiscoverer
             return [];
         }
 
+        $dedicatedCommands = [
+            'make:module',
+            'make:controller',
+            'make:service',
+            'make:migration',
+            'make:resource',
+            'make:view',
+            'migrate',
+            'env:validate',
+            'project:info',
+            'feature-pack:list',
+            'feature-pack:create',
+            'feature-pack:install',
+            'feature-pack:integrate',
+            'test',
+            'lint',
+            'log:tail',
+            'container:describe',
+            'routes:list',
+            'find:usages',
+            'docs:sync',
+            'setup:run-configs',
+        ];
+
         $tools = [];
         foreach ($data['commands'] as $cmd) {
             $name = $cmd['name'] ?? null;
-            if (!$name) continue;
+            if (!$name || in_array($name, $dedicatedCommands)) {
+                continue;
+            }
 
-            // Skip commands that have dedicated MCP tool implementations
-            // Dedicated tools usually have prefix ish: and match the CLI command name
-            $mcpName = 'ish:' . $name;
-            
-            // We'll let the registration logic handle de-duplication if needed, 
-            // but here we can decide whether to create a DynamicIshTool.
             $tools[] = new DynamicIshTool($this->context, $cmd);
         }
 

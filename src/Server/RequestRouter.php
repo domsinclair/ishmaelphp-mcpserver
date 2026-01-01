@@ -45,8 +45,18 @@
 
         public function registerTool(Tool $tool): void
         {
+            $name = $tool->getName();
 
-            $this->tools[$tool->getName()] = $tool;
+            // If it's already registered, we might want to prefer Dedicated tools 
+            // over DynamicIshTool instances.
+            if (isset($this->tools[$name])) {
+                if ($tool instanceof \Ishmael\McpServer\Tools\DynamicIshTool) {
+                    // Don't overwrite an existing (likely dedicated) tool with a dynamic one
+                    return;
+                }
+            }
+
+            $this->tools[$name] = $tool;
         }
 
 
