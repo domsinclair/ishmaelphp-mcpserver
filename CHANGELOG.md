@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.14](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.13...v0.7.14) (2026-01-01)
+
+
+### Bug Fixes
+
+* Improve tool discovery. ([cb9f267](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/cb9f267f1eaeef6c0f72bdf786203060f4e30eff))
+
 ## [0.7.13](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.12...v0.7.13) (2026-01-01)
 
 
