@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.13](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.12...v0.7.13) (2026-01-01)
+
+
+### Bug Fixes
+
+* Improvements to the server to make it more easily accessible to the AI in the ide. ([28fa3b9](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/28fa3b9c9b872fe52990814b14ce837e7c421048))
+
 ## [0.7.12](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.11...v0.7.12) (2025-12-31)
 
 
