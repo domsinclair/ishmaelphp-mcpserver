@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.15](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.14...v0.7.15) (2026-01-02)
+
+
+### Bug Fixes
+
+* Make the server more aware of the underlying framework ([090a4e9](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/090a4e9201c3309ff7242a47c2b1116fbd8182b7))
+
 ## [0.7.14](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.13...v0.7.14) (2026-01-01)
 
 
