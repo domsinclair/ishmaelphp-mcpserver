@@ -40,6 +40,7 @@ final class MakeServiceTool implements Tool
                 'module' => ['type' => 'string', 'description' => 'Target module name.'],
                 'name' => ['type' => 'string', 'description' => 'Service name.'],
                 'templates' => ['type' => ['string', 'null'], 'description' => 'Override template source directory.'],
+                'preview' => ['type' => 'boolean', 'description' => 'Preview the generated code without writing to disk.'],
             ],
         ];
     }
@@ -58,6 +59,17 @@ final class MakeServiceTool implements Tool
                     'items' => ['type' => 'string'],
                     'description' => 'Absolute paths of created files.'
                 ],
+                'preview' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'path' => ['type' => 'string'],
+                            'content' => ['type' => 'string'],
+                        ]
+                    ],
+                    'description' => 'Generated file contents (if preview was requested).'
+                ],
             ],
         ];
     }
@@ -70,6 +82,9 @@ final class MakeServiceTool implements Tool
         if (isset($input['templates'])) {
             $options['templates'] = $input['templates'];
         }
+        if (!empty($input['preview'])) {
+            $options['preview'] = true;
+        }
 
         $bridge = new IshCliBridge($this->context);
         $result = $bridge->execute('make:service', $options, [$module, $name]);
@@ -79,6 +94,7 @@ final class MakeServiceTool implements Tool
             'output' => $result['output'],
             'error' => $result['error'],
             'files' => $result['files'],
+            'preview' => $result['preview'] ?? [],
         ];
     }
 }

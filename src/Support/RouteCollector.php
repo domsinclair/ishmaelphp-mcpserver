@@ -22,7 +22,7 @@ final class RouteCollector
     }
 
     /**
-     * @return array<int, array{method: string, path: string, handler: string}>
+     * @return array<int, array{method: string, path: string, handler: string, module: string}>
      */
     public function collect(): array
     {
@@ -55,7 +55,7 @@ final class RouteCollector
     }
 
     /**
-     * @return array<int, array{method: string, path: string, handler: string}>
+     * @return array<int, array{method: string, path: string, handler: string, module: string}>
      */
     private function parseRoutesFile(string $file, string $moduleName): array
     {
@@ -97,6 +97,7 @@ final class RouteCollector
                 'method' => 'ANY', // Legacy arrays don't specify method in keys usually
                 'path' => '/' . ltrim($path, '/'),
                 'handler' => $this->normalizeHandler($h, $moduleName),
+                'module' => $moduleName,
             ];
         }
         return $out;
@@ -110,7 +111,12 @@ final class RouteCollector
             $ref = new \ReflectionClass(RouterProbe::class);
             $probe = $ref->newInstanceWithoutConstructor();
             $closure($probe);
-            return RouterProbe::$collected;
+            
+            $collected = RouterProbe::$collected;
+            foreach ($collected as &$route) {
+                $route['module'] = $moduleName;
+            }
+            return $collected;
         } catch (\Throwable $e) {
             if ($this->throwOnError) {
                 throw $e;

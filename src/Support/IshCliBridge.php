@@ -24,7 +24,7 @@ final class IshCliBridge
      * @param string $command The command name (e.g., 'make:module')
      * @param array<string, mixed> $options Key-value options (e.g., ['name' => 'Blog', 'api' => true])
      * @param array<int, string> $arguments Positional arguments
-     * @return array{success: bool, output: string, error: ?string, files: string[]}
+     * @return array{success: bool, output: string, error: ?string, files: string[], preview?: array<int, array{path: string, content: string}>}
      */
     public function execute(string $command, array $options = [], array $arguments = []): array
     {
@@ -101,12 +101,38 @@ final class IshCliBridge
         $success = ($exitCode === 0);
         $files = $this->parseCreatedFiles($stdout);
 
-        return [
+        $result = [
             'success' => $success,
             'output' => trim($stdout),
             'error' => $success ? null : trim($stderr ?: $stdout),
             'files' => $files,
         ];
+
+        if (!empty($options['preview'])) {
+            $result['preview'] = $this->parsePreviewOutput($stdout);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Parse the preview output from ish binary.
+     *
+     * @return array<int, array{path: string, content: string}>
+     */
+    private function parsePreviewOutput(string $output): array
+    {
+        $previews = [];
+        $pattern = '/---PREVIEW-START---\s+Path:\s+(.*?)\s+Content:\s+(.*?)\s+---PREVIEW-END---/s';
+        if (preg_match_all($pattern, $output, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $previews[] = [
+                    'path' => trim($match[1]),
+                    'content' => trim($match[2]),
+                ];
+            }
+        }
+        return $previews;
     }
 
     /**

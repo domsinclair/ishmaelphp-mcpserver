@@ -39,6 +39,7 @@ final class MakeMigrationTool implements Tool
             'properties' => [
                 'name' => ['type' => 'string', 'description' => 'Migration name.'],
                 'module' => ['type' => ['string', 'null'], 'description' => 'Target module name.'],
+                'preview' => ['type' => 'boolean', 'description' => 'Preview the generated code without writing to disk.'],
             ],
         ];
     }
@@ -57,6 +58,17 @@ final class MakeMigrationTool implements Tool
                     'items' => ['type' => 'string'],
                     'description' => 'Absolute paths of created files.'
                 ],
+                'preview' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'path' => ['type' => 'string'],
+                            'content' => ['type' => 'string'],
+                        ]
+                    ],
+                    'description' => 'Generated file contents (if preview was requested).'
+                ],
             ],
         ];
     }
@@ -68,6 +80,9 @@ final class MakeMigrationTool implements Tool
         if (isset($input['module'])) {
             $options['module'] = $input['module'];
         }
+        if (!empty($input['preview'])) {
+            $options['preview'] = true;
+        }
 
         $bridge = new IshCliBridge($this->context);
         $result = $bridge->execute('make:migration', $options, [$name]);
@@ -77,6 +92,7 @@ final class MakeMigrationTool implements Tool
             'output' => $result['output'],
             'error' => $result['error'],
             'files' => $result['files'],
+            'preview' => $result['preview'] ?? [],
         ];
     }
 }

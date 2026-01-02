@@ -17,8 +17,11 @@ use Ishmael\McpServer\Project\ProjectContext;
 
 final class ContainerDescribeTool implements Tool
 {
-    public function __construct()
+    private ProjectContext $context;
+
+    public function __construct(ProjectContext $context)
     {
+        $this->context = $context;
     }
 
 
@@ -33,8 +36,7 @@ final class ContainerDescribeTool implements Tool
 
     public function getDescription(): string
     {
-
-        return 'Describe DI container services and aliases (read-only; incubation placeholder).';
+        return 'Describe DI container services and aliases (introspects the app() registry).';
     }
 
 
@@ -135,15 +137,112 @@ final class ContainerDescribeTool implements Tool
 
     public function execute(array $input): array
     {
+        $root = $this->context->getRoot();
+        if ($root === null) {
+            return ['services' => [], 'aliases' => []];
+        }
 
-        // Placeholder: no container introspection yet in incubation stage
+        // Try standard locations for bootstrap
+        $bootstrap = $root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'ishmael' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php';
+        
+        if (!file_exists($bootstrap)) {
+            // Fallback to my-app specific location if we are testing or if structure differs
+            $bootstrap = $root . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php';
+        }
 
-        return [
+        if (!file_exists($bootstrap)) {
+             // If we still can't find it, we might be in a dev environment for the framework itself
+             $bootstrap = $root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+        }
 
-            'services' => [],
+        $idFilter = $input['id'] ?? null;
+        // The tag filter is currently not supported by the minimal app() helper but we keep it for schema compatibility
 
-            'aliases' => [],
+        $code = <<<'PHP'
+<?php
+error_reporting(0);
+ini_set('display_errors', '0');
+ob_start();
 
+$root = '%s';
+$autoload = $root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+if (file_exists($autoload)) {
+    require_once $autoload;
+}
+
+if (!defined('ISH_APP_BASE')) {
+    define('ISH_APP_BASE', $root);
+}
+define('ISH_BOOTSTRAP_ONLY', true);
+
+if (file_exists('%s')) {
+    require_once '%s';
+}
+
+$services = [];
+if (function_exists('app')) {
+    try {
+        $rawServices = app();
+        if (is_array($rawServices)) {
+            foreach ($rawServices as $id => $instance) {
+                $class = is_object($instance) ? get_class($instance) : (is_string($instance) ? $instance : null);
+                $services[] = [
+                    'id' => (string)$id,
+                    'class' => $class,
+                    'singleton' => true,
+                    'tags' => [],
+                    'aliases' => [],
+                ];
+            }
+        }
+    } catch (\Throwable $e) {
+    }
+}
+
+ob_end_clean();
+echo json_encode(['services' => $services, 'aliases' => []]);
+PHP;
+
+        $php = PHP_BINARY ?: 'php';
+        $tempFile = tempnam(sys_get_temp_dir(), 'ish_container_');
+        file_put_contents($tempFile, sprintf($code, addslashes($root), addslashes($bootstrap), addslashes($bootstrap)));
+
+        $descriptorspec = [
+            1 => ["pipe", "w"],
+            2 => ["pipe", "w"]
         ];
+
+        $process = proc_open(escapeshellarg($php) . " " . escapeshellarg($tempFile), $descriptorspec, $pipes, $root, [
+            'ISH_APP_BASE' => $root,
+            'ISH_BOOTSTRAP_ONLY' => '1'
+        ]);
+
+        if (!is_resource($process)) {
+            @unlink($tempFile);
+            return ['services' => [], 'aliases' => []];
+        }
+
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $exitCode = proc_close($process);
+        @unlink($tempFile);
+
+        if ($exitCode !== 0) {
+            // Potentially log or return error
+            return ['services' => [], 'aliases' => [], 'error' => trim($stderr)];
+        }
+
+        $data = json_decode((string)$stdout, true);
+        if (!is_array($data)) {
+            return ['services' => [], 'aliases' => []];
+        }
+
+        if ($idFilter) {
+            $data['services'] = array_values(array_filter($data['services'], fn($s) => $s['id'] === $idFilter));
+        }
+
+        return $data;
     }
 }

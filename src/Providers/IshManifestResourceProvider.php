@@ -6,6 +6,7 @@ namespace Ishmael\McpServer\Providers;
 
 use Ishmael\McpServer\Contracts\ResourceProvider;
 use Ishmael\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Support\ClassMetadataScanner;
 
 /**
  * Exposes a JSON representation of all detected modules and their metadata (ish://config/manifest).
@@ -13,10 +14,12 @@ use Ishmael\McpServer\Project\ProjectContext;
 final class IshManifestResourceProvider implements ResourceProvider
 {
     private ProjectContext $context;
+    private ClassMetadataScanner $scanner;
 
     public function __construct(ProjectContext $context)
     {
         $this->context = $context;
+        $this->scanner = new ClassMetadataScanner();
     }
 
     public function listResources(): array
@@ -69,6 +72,16 @@ final class IshManifestResourceProvider implements ResourceProvider
             'appEnv' => getenv('APP_ENV') ?: 'development',
         ]);
 
-        return json_encode(\Ishmael\Core\ModuleManager::$modules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $modules = \Ishmael\Core\ModuleManager::$modules;
+
+        // Debugging
+        foreach ($modules as $name => &$moduleData) {
+            $modulePath = $moduleData['path'] ?? null;
+            if ($modulePath && is_dir($modulePath)) {
+                $moduleData['classes'] = $this->scanner->scan($modulePath, 'Modules\\' . $name);
+            }
+        }
+
+        return json_encode($modules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 }

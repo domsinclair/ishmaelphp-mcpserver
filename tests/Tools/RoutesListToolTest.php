@@ -77,6 +77,12 @@ PHP;
         $this->assertCount(4, $result['routes']);
         $this->assertEquals(4, $result['total']);
         $this->assertFalse($result['truncated']);
+
+        foreach ($result['routes'] as $route) {
+            $this->assertArrayHasKey('integrity', $route);
+            $this->assertArrayHasKey('module', $route);
+            $this->assertEquals('Blog', $route['module']);
+        }
     }
 
     public function testExecuteFiltersRoutes(): void

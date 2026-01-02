@@ -47,6 +47,7 @@ use Ishmael\McpServer\Providers\TemplatesResourceProvider;
 use Ishmael\McpServer\Providers\PackageDocsResourceProvider;
 use Ishmael\McpServer\Providers\IshStubsResourceProvider;
 use Ishmael\McpServer\Providers\IshManifestResourceProvider;
+use Ishmael\McpServer\Providers\IshAiManifestoResourceProvider;
 use Ishmael\McpServer\Providers\IshCliMetadataResourceProvider;
 use Ishmael\McpServer\Providers\IshHealthResourceProvider;
 use Ishmael\McpServer\Providers\AiContextResourceProvider;
@@ -62,6 +63,7 @@ use Ishmael\McpServer\Tools\LogTailTool;
 use Ishmael\McpServer\Tools\ContainerDescribeTool;
 use Ishmael\McpServer\Tools\MigrateTool;
 use Ishmael\McpServer\Tools\MakeModuleTool;
+use Ishmael\McpServer\Tools\ModulesCheckTool;
 use Ishmael\McpServer\Tools\MakeControllerTool;
 use Ishmael\McpServer\Tools\MakeServiceTool;
 use Ishmael\McpServer\Tools\MakeMigrationTool;
@@ -72,10 +74,13 @@ use Ishmael\McpServer\Tools\SetupRunConfigsTool;
 use Ishmael\McpServer\Tools\FeaturePackInstallTool;
 use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
 use Ishmael\McpServer\Tools\RoutesListTool;
+use Ishmael\McpServer\Tools\ModuleDependencyTool;
 use Ishmael\McpServer\Tools\FindUsagesTool;
 use Ishmael\McpServer\Tools\DocsSyncTool;
 use Ishmael\McpServer\Prompts\BestPracticesPrompt;
 use Ishmael\McpServer\Prompts\SetupProjectPrompt;
+use Ishmael\McpServer\Prompts\PlanFeaturePrompt;
+use Ishmael\McpServer\Prompts\TroubleshootPrompt;
 use Ishmael\McpServer\Project\ProjectContext;
 
 use Ishmael\McpServer\Support\IshToolDiscoverer;
@@ -98,6 +103,7 @@ $router->registerTool(new LogTailTool($context));
 $router->registerTool(new ContainerDescribeTool($context));
 $router->registerTool(new MigrateTool($context));
 $router->registerTool(new MakeModuleTool($context));
+$router->registerTool(new ModulesCheckTool($context));
 $router->registerTool(new MakeControllerTool($context));
 $router->registerTool(new MakeServiceTool($context));
 $router->registerTool(new MakeMigrationTool($context));
@@ -108,6 +114,7 @@ $router->registerTool(new SetupRunConfigsTool($context));
 $router->registerTool(new FeaturePackInstallTool($context));
 $router->registerTool(new FeaturePackIntegrateTool($context));
 $router->registerTool(new RoutesListTool($context));
+$router->registerTool(new ModuleDependencyTool($context));
 $router->registerTool(new FindUsagesTool($context));
 $router->registerTool(new DocsSyncTool($context));
 
@@ -129,8 +136,9 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
         $root . DIRECTORY_SEPARATOR . 'Docs'
     ]);
     $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
-    $ishStubs = new IshStubsResourceProvider($sandbox, dirname($context->getIshBinary(), 2));
+    $ishStubs = new IshStubsResourceProvider($sandbox, dirname($context->getIshBinary(), 2), $context);
     $ishManifest = new IshManifestResourceProvider($context);
+    $ishAiManifesto = new IshAiManifestoResourceProvider(__DIR__ . '/../resources/Docs/ai-manifesto.md');
     $cliMetadata = new IshCliMetadataResourceProvider($context);
     $projectHealth = new IshHealthResourceProvider($context);
     $aiContext = new AiContextResourceProvider($context);
@@ -141,6 +149,7 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
         $templatesProvider,
         $ishStubs,
         $ishManifest,
+        $ishAiManifesto,
         $cliMetadata,
         $projectHealth,
         $aiContext
@@ -150,14 +159,18 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
 }
 $bestPractices = new BestPracticesPrompt();
 $setupProject = new SetupProjectPrompt();
+$planFeature = new PlanFeaturePrompt();
+$troubleshoot = new TroubleshootPrompt();
 
 $prompts = new StaticPromptProvider([
     ['id' => $bestPractices->getName(), 'description' => $bestPractices->getDescription()],
     ['id' => $setupProject->getName(), 'description' => $setupProject->getDescription()],
+    ['id' => $planFeature->getName(), 'description' => $planFeature->getDescription()],
+    ['id' => $troubleshoot->getName(), 'description' => $troubleshoot->getDescription()],
     ['id' => 'scaffold:controller', 'description' => 'Guide to scaffold a controller (dry-run)'],
     ['id' => 'prompt:generate-feature-pack', 'description' => 'Explain how to plan and author a new Feature Pack'],
     ['id' => 'prompt:integrate-feature-pack', 'description' => 'Explain integration steps for Feature Packs and how to apply them safely'],
-], [$bestPractices, $setupProject]);
+], [$bestPractices, $setupProject, $planFeature, $troubleshoot]);
 
 $server = new Server($router, $transport, $resources, $prompts);
 $server->run();

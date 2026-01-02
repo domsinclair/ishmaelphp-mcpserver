@@ -39,7 +39,9 @@ final class MakeModuleTool implements Tool
             'properties' => [
                 'name' => ['type' => 'string', 'description' => 'The name of the module (StudlyCase preferred).'],
                 'api' => ['type' => 'boolean', 'description' => 'Hint API-style module (no session/CSRF route grouping).'],
+                'dependencies' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'List of module names this module depends on.'],
                 'templates' => ['type' => ['string', 'null'], 'description' => 'Override template source directory.'],
+                'preview' => ['type' => 'boolean', 'description' => 'Preview the generated code without writing to disk.'],
             ],
         ];
     }
@@ -58,6 +60,17 @@ final class MakeModuleTool implements Tool
                     'items' => ['type' => 'string'],
                     'description' => 'Absolute paths of created files.'
                 ],
+                'preview' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'path' => ['type' => 'string'],
+                            'content' => ['type' => 'string'],
+                        ]
+                    ],
+                    'description' => 'Generated file contents (if preview was requested).'
+                ],
             ],
         ];
     }
@@ -69,8 +82,14 @@ final class MakeModuleTool implements Tool
         if (!empty($input['api'])) {
             $options['api'] = true;
         }
+        if (!empty($input['dependencies'])) {
+            $options['dependencies'] = implode(',', $input['dependencies']);
+        }
         if (isset($input['templates'])) {
             $options['templates'] = $input['templates'];
+        }
+        if (!empty($input['preview'])) {
+            $options['preview'] = true;
         }
 
         $bridge = new IshCliBridge($this->context);
@@ -81,6 +100,7 @@ final class MakeModuleTool implements Tool
             'output' => $result['output'],
             'error' => $result['error'],
             'files' => $result['files'],
+            'preview' => $result['preview'] ?? [],
         ];
     }
 }

@@ -6,6 +6,8 @@ namespace Ishmael\McpServer\Providers;
 
 use Ishmael\McpServer\Contracts\ResourceProvider;
 use Ishmael\McpServer\Project\PathSandbox;
+use Ishmael\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Support\StubDataCollector;
 
 /**
  * Exposes framework stubs as resources (ish://stubs/{path}).
@@ -14,17 +16,35 @@ final class IshStubsResourceProvider implements ResourceProvider
 {
     private PathSandbox $sandbox;
     private string $coreRoot;
+    private ?StubDataCollector $collector;
 
-    public function __construct(PathSandbox $sandbox, string $coreRoot)
+    public function __construct(PathSandbox $sandbox, string $coreRoot, ?ProjectContext $context = null)
     {
         $this->sandbox = $sandbox;
         $this->coreRoot = $coreRoot;
+        $this->collector = $context ? new StubDataCollector($context) : null;
     }
 
     public function listResources(): array
     {
         $stubsDir = $this->coreRoot . DIRECTORY_SEPARATOR . 'Resources' . DIRECTORY_SEPARATOR . 'stubs';
         $items = [];
+
+        // Virtual dynamic stubs
+        if ($this->collector) {
+            $items[] = [
+                'uri' => 'ish://stubs/Project/Tables.php',
+                'name' => 'Project Tables (Dynamic)',
+                'description' => 'Dynamic stub containing constants for all database tables',
+                'mimeType' => 'application/x-php',
+            ];
+            $items[] = [
+                'uri' => 'ish://stubs/Project/Config.php',
+                'name' => 'Project Config (Dynamic)',
+                'description' => 'Dynamic stub containing constants for all available config keys',
+                'mimeType' => 'application/x-php',
+            ];
+        }
 
         if (!is_dir($stubsDir)) {
             return $items;
@@ -61,6 +81,15 @@ final class IshStubsResourceProvider implements ResourceProvider
             return null;
         }
 
+        if ($this->collector) {
+            if ($uri === 'ish://stubs/Project/Tables.php') {
+                return $this->generateTablesStub();
+            }
+            if ($uri === 'ish://stubs/Project/Config.php') {
+                return $this->generateConfigStub();
+            }
+        }
+
         $relPath = substr($uri, 12);
         $stubsDir = $this->coreRoot . DIRECTORY_SEPARATOR . 'Resources' . DIRECTORY_SEPARATOR . 'stubs';
         $fullPath = $stubsDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relPath);
@@ -70,5 +99,29 @@ final class IshStubsResourceProvider implements ResourceProvider
         }
 
         return null;
+    }
+
+    private function generateTablesStub(): string
+    {
+        $tables = $this->collector ? $this->collector->getTables() : [];
+        $php = "<?php\n\n/**\n * Auto-generated stub for project database tables.\n */\n\nclass Tables\n{\n";
+        foreach ($tables as $table) {
+            $constName = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '_', $table));
+            $php .= "    public const " . $constName . " = '" . $table . "';\n";
+        }
+        $php .= "}\n";
+        return $php;
+    }
+
+    private function generateConfigStub(): string
+    {
+        $keys = $this->collector ? $this->collector->getConfigKeys() : [];
+        $php = "<?php\n\n/**\n * Auto-generated stub for project configuration keys.\n */\n\nclass ConfigKeys\n{\n";
+        foreach ($keys as $key) {
+            $constName = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '_', $key));
+            $php .= "    public const " . $constName . " = '" . $key . "';\n";
+        }
+        $php .= "}\n";
+        return $php;
     }
 }

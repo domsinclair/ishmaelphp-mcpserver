@@ -55,6 +55,15 @@ final class RoutesListTool implements Tool
                             'method' => ['type' => 'string'],
                             'path' => ['type' => 'string'],
                             'handler' => ['type' => 'string'],
+                            'module' => ['type' => 'string'],
+                            'integrity' => [
+                                'type' => 'object',
+                                'required' => ['valid'],
+                                'properties' => [
+                                    'valid' => ['type' => 'boolean'],
+                                    'error' => ['type' => ['string', 'null']],
+                                ],
+                            ],
                         ],
                         'additionalProperties' => false,
                     ],
@@ -70,8 +79,24 @@ final class RoutesListTool implements Tool
     public function execute(array $input): array
     {
         try {
+            $root = $this->context->getRoot();
+            if ($root !== null) {
+                // Ensure autoloader is available for integrity checks
+                $autoload = $root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+                if (file_exists($autoload)) {
+                    require_once $autoload;
+                }
+            }
+
             $collector = new RouteCollector($this->context, true);
             $routes = $collector->collect();
+
+            $checker = new \Ishmael\McpServer\Support\RouteIntegrityChecker($this->context);
+
+            foreach ($routes as &$route) {
+                $route['integrity'] = $checker->check($route);
+            }
+            unset($route);
 
             // Apply filtering
             $filter = isset($input['filter']) && is_string($input['filter']) ? $input['filter'] : null;

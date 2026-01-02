@@ -41,6 +41,7 @@ final class MakeControllerTool implements Tool
                 'name' => ['type' => 'string', 'description' => 'Controller name.'],
                 'invokable' => ['type' => 'boolean', 'description' => 'Generate an invokable controller.'],
                 'templates' => ['type' => ['string', 'null'], 'description' => 'Override template source directory.'],
+                'preview' => ['type' => 'boolean', 'description' => 'Preview the generated code without writing to disk.'],
             ],
         ];
     }
@@ -59,6 +60,17 @@ final class MakeControllerTool implements Tool
                     'items' => ['type' => 'string'],
                     'description' => 'Absolute paths of created files.'
                 ],
+                'preview' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'path' => ['type' => 'string'],
+                            'content' => ['type' => 'string'],
+                        ]
+                    ],
+                    'description' => 'Generated file contents (if preview was requested).'
+                ],
             ],
         ];
     }
@@ -74,6 +86,9 @@ final class MakeControllerTool implements Tool
         if (isset($input['templates'])) {
             $options['templates'] = $input['templates'];
         }
+        if (!empty($input['preview'])) {
+            $options['preview'] = true;
+        }
 
         $bridge = new IshCliBridge($this->context);
         $result = $bridge->execute('make:controller', $options, [$module, $name]);
@@ -83,6 +98,7 @@ final class MakeControllerTool implements Tool
             'output' => $result['output'],
             'error' => $result['error'],
             'files' => $result['files'],
+            'preview' => $result['preview'] ?? [],
         ];
     }
 }

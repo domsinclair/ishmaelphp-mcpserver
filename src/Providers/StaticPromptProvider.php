@@ -34,6 +34,10 @@
 
         public function getPrompt(string $name, array $arguments = []): ?Prompt
         {
-            return $this->prompts[$name] ?? null;
+            $prompt = $this->prompts[$name] ?? null;
+            if ($prompt !== null && method_exists($prompt, 'withArguments')) {
+                return $prompt->withArguments($arguments);
+            }
+            return $prompt;
         }
     }
