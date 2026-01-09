@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.16](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.15...v0.7.16) (2026-01-09)
+
+
+### Bug Fixes
+
+* Improve the mcp server to support Retrieval Augmented Generation ([71b511d](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/71b511d920fe2d71053332bf12fdd4f7dbb9d5a0))
+
 ## [0.7.15](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.14...v0.7.15) (2026-01-02)
 
 
