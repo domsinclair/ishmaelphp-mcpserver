@@ -27,7 +27,7 @@ final class MakeViewTool implements Tool
 
     public function getDescription(): string
     {
-        return 'Create a specific view file (e.g., blog/show).';
+        return 'Create a specific view file. Supports RAG-friendly semantic scaffolding.';
     }
 
     public function getInputSchema(): array
@@ -39,6 +39,7 @@ final class MakeViewTool implements Tool
             'properties' => [
                 'module' => ['type' => 'string', 'description' => 'Target module name.'],
                 'path' => ['type' => 'string', 'description' => 'View path (e.g., blog/show).'],
+                'knowledge' => ['type' => 'boolean', 'description' => 'Use RAG-friendly semantic stubs (knowledge_page, concept).'],
                 'templates' => ['type' => ['string', 'null'], 'description' => 'Override template source directory.'],
             ],
         ];
@@ -67,6 +68,9 @@ final class MakeViewTool implements Tool
         $module = $input['module'];
         $path = $input['path'];
         $options = [];
+        if (!empty($input['knowledge'])) {
+            $options['knowledge'] = true;
+        }
         if (isset($input['templates'])) {
             $options['templates'] = $input['templates'];
         }

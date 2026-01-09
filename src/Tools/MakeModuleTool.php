@@ -27,7 +27,7 @@ final class MakeModuleTool implements Tool
 
     public function getDescription(): string
     {
-        return 'Scaffold a new module skeleton (controllers, models, views, routes.php, module.json).';
+        return 'Scaffold a new module skeleton (controllers, models, views, routes.php, module.json). Supports dependencies and RAG-friendly metadata.';
     }
 
     public function getInputSchema(): array
@@ -40,6 +40,7 @@ final class MakeModuleTool implements Tool
                 'name' => ['type' => 'string', 'description' => 'The name of the module (StudlyCase preferred).'],
                 'api' => ['type' => 'boolean', 'description' => 'Hint API-style module (no session/CSRF route grouping).'],
                 'dependencies' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'List of module names this module depends on.'],
+                'knowledge' => ['type' => 'boolean', 'description' => 'Scaffold as a knowledge module with RAG-friendly semantic stubs.'],
                 'templates' => ['type' => ['string', 'null'], 'description' => 'Override template source directory.'],
                 'preview' => ['type' => 'boolean', 'description' => 'Preview the generated code without writing to disk.'],
             ],
@@ -84,6 +85,9 @@ final class MakeModuleTool implements Tool
         }
         if (!empty($input['dependencies'])) {
             $options['dependencies'] = implode(',', $input['dependencies']);
+        }
+        if (!empty($input['knowledge'])) {
+            $options['knowledge'] = true;
         }
         if (isset($input['templates'])) {
             $options['templates'] = $input['templates'];

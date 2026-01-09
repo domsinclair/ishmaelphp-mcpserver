@@ -74,12 +74,23 @@ final class IshManifestResourceProvider implements ResourceProvider
 
         $modules = \Ishmael\Core\ModuleManager::$modules;
 
-        // Debugging
+        // Clean up and enrich module data for the MCP resource
         foreach ($modules as $name => &$moduleData) {
             $modulePath = $moduleData['path'] ?? null;
             if ($modulePath && is_dir($modulePath)) {
                 $moduleData['classes'] = $this->scanner->scan($modulePath, 'Modules\\' . $name);
             }
+
+            // Ensure intent metadata is explicitly visible if present in manifest
+            $manifest = $moduleData['manifest'] ?? [];
+            $intentFields = ['type', 'audience', 'stability', 'knowledge'];
+            foreach ($intentFields as $field) {
+                if (isset($manifest[$field])) {
+                    $moduleData[$field] = $manifest[$field];
+                }
+            }
+            
+            // Dependencies are already in $moduleData['dependencies'] from ModuleManager::discover
         }
 
         return json_encode($modules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
