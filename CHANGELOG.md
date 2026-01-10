@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.17](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.16...v0.7.17) (2026-01-10)
+
+
+### Bug Fixes
+
+* Improve prompts and project analysis ([0d22560](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/0d22560a04c03c502cad2549ee18d9f9557d3c1c))
+
 ## [0.7.16](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.15...v0.7.16) (2026-01-09)
 
 
