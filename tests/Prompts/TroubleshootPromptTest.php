@@ -29,7 +29,7 @@ final class TroubleshootPromptTest extends TestCase
         $this->assertCount(1, $messages);
         $this->assertEquals('assistant', $messages[0]['role']);
         $this->assertStringContainsString('No specific error message provided', $messages[0]['content']['text']);
-        $this->assertStringContainsString('ish://project/health', $messages[0]['content']['text']);
+        $this->assertStringContainsString('ish:project:snapshot', $messages[0]['content']['text']);
         $this->assertStringContainsString('ish:log:tail', $messages[0]['content']['text']);
     }
 

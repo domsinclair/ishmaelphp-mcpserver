@@ -70,17 +70,22 @@ use Ishmael\McpServer\Tools\MakeMigrationTool;
 use Ishmael\McpServer\Tools\MakeResourceTool;
 use Ishmael\McpServer\Tools\MakeViewTool;
 use Ishmael\McpServer\Tools\EnvValidateTool;
+use Ishmael\McpServer\Tools\EnvDriftTool;
+use Ishmael\McpServer\Tools\ProjectSnapshotTool;
 use Ishmael\McpServer\Tools\SetupRunConfigsTool;
 use Ishmael\McpServer\Tools\FeaturePackInstallTool;
 use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
 use Ishmael\McpServer\Tools\RoutesListTool;
 use Ishmael\McpServer\Tools\ModuleDependencyTool;
+use Ishmael\McpServer\Tools\ModulesAnalyzeTool;
+use Ishmael\McpServer\Tools\MigrateAnalyzeTool;
 use Ishmael\McpServer\Tools\FindUsagesTool;
 use Ishmael\McpServer\Tools\DocsSyncTool;
 use Ishmael\McpServer\Prompts\BestPracticesPrompt;
 use Ishmael\McpServer\Prompts\SetupProjectPrompt;
 use Ishmael\McpServer\Prompts\PlanFeaturePrompt;
 use Ishmael\McpServer\Prompts\TroubleshootPrompt;
+use Ishmael\McpServer\Prompts\DatabaseDesignPrompt;
 use Ishmael\McpServer\Project\ProjectContext;
 
 use Ishmael\McpServer\Support\IshToolDiscoverer;
@@ -110,11 +115,15 @@ $router->registerTool(new MakeMigrationTool($context));
 $router->registerTool(new MakeResourceTool($context));
 $router->registerTool(new MakeViewTool($context));
 $router->registerTool(new EnvValidateTool($context));
+$router->registerTool(new EnvDriftTool($context));
+$router->registerTool(new ProjectSnapshotTool($context));
 $router->registerTool(new SetupRunConfigsTool($context));
 $router->registerTool(new FeaturePackInstallTool($context));
 $router->registerTool(new FeaturePackIntegrateTool($context));
 $router->registerTool(new RoutesListTool($context));
 $router->registerTool(new ModuleDependencyTool($context));
+$router->registerTool(new ModulesAnalyzeTool($context));
+$router->registerTool(new MigrateAnalyzeTool($context));
 $router->registerTool(new FindUsagesTool($context));
 $router->registerTool(new DocsSyncTool($context));
 
@@ -163,16 +172,18 @@ $bestPractices = new BestPracticesPrompt();
 $setupProject = new SetupProjectPrompt();
 $planFeature = new PlanFeaturePrompt();
 $troubleshoot = new TroubleshootPrompt();
+$databaseDesign = new DatabaseDesignPrompt();
 
 $prompts = new StaticPromptProvider([
     ['id' => $bestPractices->getName(), 'description' => $bestPractices->getDescription()],
     ['id' => $setupProject->getName(), 'description' => $setupProject->getDescription()],
     ['id' => $planFeature->getName(), 'description' => $planFeature->getDescription()],
     ['id' => $troubleshoot->getName(), 'description' => $troubleshoot->getDescription()],
+    ['id' => $databaseDesign->getName(), 'description' => $databaseDesign->getDescription()],
     ['id' => 'scaffold:controller', 'description' => 'Guide to scaffold a controller (dry-run)'],
     ['id' => 'prompt:generate-feature-pack', 'description' => 'Explain how to plan and author a new Feature Pack'],
     ['id' => 'prompt:integrate-feature-pack', 'description' => 'Explain integration steps for Feature Packs and how to apply them safely'],
-], [$bestPractices, $setupProject, $planFeature, $troubleshoot]);
+], [$bestPractices, $setupProject, $planFeature, $troubleshoot, $databaseDesign]);
 
 $server = new Server($router, $transport, $resources, $prompts);
 $server->run();

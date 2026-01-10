@@ -12,8 +12,6 @@ use Ishmael\McpServer\Providers\AggregateResourceProvider;
 
 use Ishmael\McpServer\Providers\DocsResourceProvider;
 
-use Ishmael\McpServer\Providers\PackageDocsResourceProvider;
-
 use Ishmael\McpServer\Providers\StaticPromptProvider;
 
 use Ishmael\McpServer\Providers\StaticResourceProvider;
@@ -76,13 +74,11 @@ final class GoldenOutputsTest extends TestCase
 
             $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
 
-            $packagedDocs = new PackageDocsResourceProvider();
-
-            $resources = new AggregateResourceProvider([$staticResources, $docsProvider, $templatesProvider, $packagedDocs]);
+            $resources = new AggregateResourceProvider([$staticResources, $docsProvider, $templatesProvider]);
 
         } else {
 
-            $resources = new AggregateResourceProvider([$staticResources, new PackageDocsResourceProvider()]);
+            $resources = new AggregateResourceProvider([$staticResources]);
 
         }
 

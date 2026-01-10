@@ -6,6 +6,7 @@ namespace Ishmael\McpServer\Tools;
 
 use Ishmael\McpServer\Contracts\Tool;
 use Ishmael\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Support\StackTraceMapper;
 
 /**
 
@@ -104,6 +105,18 @@ final class LogTailTool implements Tool
 
                             'context' => ['type' => ['object','null']],
 
+                            'stack_trace' => [
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'file' => ['type' => 'string'],
+                                        'line' => ['type' => 'integer'],
+                                        'function' => ['type' => ['string', 'null']],
+                                    ]
+                                ]
+                            ],
+
                             'raw' => ['type' => 'string'],
 
                         ],
@@ -164,9 +177,10 @@ final class LogTailTool implements Tool
 
                 if ($logFile !== null) {
                     $lines = $this->tailFile($logFile, $max);
+                    $mapper = new StackTraceMapper($root);
 
                     foreach ($lines as $line) {
-                        $events[] = $this->parseLogLine($line);
+                        $events[] = $this->parseLogLine($line, $mapper);
                     }
                 }
             }
@@ -181,55 +195,49 @@ final class LogTailTool implements Tool
 
     private function tailFile(string $file, int $maxLines): array
     {
-
-        $buf = @file($file, FILE_IGNORE_NEW_LINES) ?: [];
-
-        if (count($buf) > $maxLines) {
-            $buf = array_slice($buf, -$maxLines);
+        $content = @file_get_contents($file);
+        if ($content === false) {
+            return [];
         }
 
-        return $buf;
+        // Split by Monolog-style line starts: [YYYY-MM-DD...
+        $entries = preg_split('/(?=\[\d{4}-\d{2}-\d{2}T)/', $content, -1, PREG_SPLIT_NO_EMPTY);
+        
+        if (count($entries) > $maxLines) {
+            $entries = array_slice($entries, -$maxLines);
+        }
+
+        return array_map('trim', $entries);
     }
 
 
 
-    private function parseLogLine(string $line): array
+    private function parseLogLine(string $line, StackTraceMapper $mapper): array
     {
-
-        // Very tolerant parser for Monolog line like: [2025-01-01T12:00:00] channel.LEVEL: message {context}
-
+        // Monolog line like: [2025-01-01T12:00:00] channel.LEVEL: message {context}
+        // Might be multi-line
         $timestamp = null;
-
         $channel = null;
-
         $level = null;
-
         $message = trim($line);
 
-        if (preg_match('/^\[(.*?)\]\s+([^.]+)\.([A-Z]+):\s+(.*)$/', $line, $m) === 1) {
-            $timestamp = $m[1];
-
-            $channel = $m[2];
-
-            $level = $m[3];
-
-            $message = $m[4];
+        if (preg_match('/^\[(?P<timestamp>.*?)\]\s+(?P<channel>[^.]+)\.(?P<level>[A-Z]+):\s+(?P<message>.*)$/s', $line, $m) === 1) {
+            $timestamp = $m['timestamp'];
+            $channel = $m['channel'];
+            $level = $m['level'];
+            $message = trim($m['message']);
         }
 
+        $mapped = $mapper->map($message);
+
         return [
-
             'timestamp' => $timestamp,
-
             'level' => $level,
-
             'channel' => $channel,
-
-            'message' => $message,
-
+            'message' => $mapped['message'],
             'context' => null,
-
+            'stack_trace' => $mapped['stack_trace'],
             'raw' => $line,
-
         ];
     }
 }

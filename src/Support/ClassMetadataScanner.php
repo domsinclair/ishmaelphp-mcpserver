@@ -99,9 +99,13 @@ final class ClassMetadataScanner
                     ];
                 }
 
+                $docComment = $method->getDocComment();
+                $summary = $docComment ? $this->parseDocBlockSummary($docComment) : null;
+
                 $methods[$method->getName()] = [
                     'parameters' => $params,
                     'returnType' => $method->hasReturnType() ? $this->formatType($method->getReturnType()) : null,
+                    'summary' => $summary,
                 ];
             }
 
@@ -134,5 +138,22 @@ final class ClassMetadataScanner
             return implode('&', array_map(fn($t) => $t->getName(), $type->getTypes()));
         }
         return (string)$type;
+    }
+
+    private function parseDocBlockSummary(string $docComment): string
+    {
+        $lines = explode("\n", $docComment);
+        $summary = '';
+        foreach ($lines as $line) {
+            $line = trim($line, " \t\n\r\0\x0B/*");
+            if (empty($line) || str_starts_with($line, '@')) {
+                if (!empty($summary)) {
+                    break;
+                }
+                continue;
+            }
+            $summary .= $line . ' ';
+        }
+        return trim($summary);
     }
 }

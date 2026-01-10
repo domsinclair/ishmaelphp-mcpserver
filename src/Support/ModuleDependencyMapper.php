@@ -20,7 +20,7 @@ final class ModuleDependencyMapper
 
     /**
      * @return array{
-     *   nodes: array<int, array{id: string, path: string, version: string, env: string}>,
+     *   nodes: array<int, array{id: string, path: string, version: string, env: string, architecture?: array}>,
      *   edges: array<int, array{from: string, to: string, type: string}>
      * }
      */
@@ -62,8 +62,6 @@ final class ModuleDependencyMapper
             }
 
             // 2. Service registrations (potential cross-module dependencies)
-            // If a module registers a service that belongs to another module's namespace, 
-            // it's a soft dependency.
             $services = (array)($manifest['services'] ?? []);
             foreach ($services as $serviceId => $implementation) {
                 if (is_string($implementation)) {
@@ -85,10 +83,32 @@ final class ModuleDependencyMapper
             $key = "{$edge['from']}->{$edge['to']}:{$edge['type']}";
             $uniqueEdges[$key] = $edge;
         }
+        $finalEdges = array_values($uniqueEdges);
+
+        // Architectural analysis: Identify "God Modules" or high coupling
+        $incomingCount = [];
+        $outgoingCount = [];
+        foreach ($finalEdges as $edge) {
+            $outgoingCount[$edge['from']] = ($outgoingCount[$edge['from']] ?? 0) + 1;
+            $incomingCount[$edge['to']] = ($incomingCount[$edge['to']] ?? 0) + 1;
+        }
+
+        foreach ($nodes as &$node) {
+            $id = $node['id'];
+            $out = $outgoingCount[$id] ?? 0;
+            $in = $incomingCount[$id] ?? 0;
+
+            $node['architecture'] = [
+                'outgoing_dependencies' => $out,
+                'incoming_dependants' => $in,
+                'is_god_module' => ($out > 5 || $in > 5),
+                'suggestion' => ($out > 5) ? 'High outgoing dependencies. Consider splitting this module.' : (($in > 5) ? 'High usage. Consider making this a Core feature or a shared Feature Pack.' : null)
+            ];
+        }
 
         return [
             'nodes' => $nodes,
-            'edges' => array_values($uniqueEdges),
+            'edges' => $finalEdges,
         ];
     }
 

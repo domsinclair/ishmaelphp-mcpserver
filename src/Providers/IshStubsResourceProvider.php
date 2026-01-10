@@ -44,6 +44,12 @@ final class IshStubsResourceProvider implements ResourceProvider
                 'description' => 'Dynamic stub containing constants for all available config keys',
                 'mimeType' => 'application/x-php',
             ];
+            $items[] = [
+                'uri' => 'ish://stubs/Project/Conventions.php',
+                'name' => 'Project Conventions (Dynamic)',
+                'description' => 'Dynamic stub defining the expected structure of Models and Services based on Ishmael conventions',
+                'mimeType' => 'application/x-php',
+            ];
         }
 
         if (!is_dir($stubsDir)) {
@@ -88,6 +94,9 @@ final class IshStubsResourceProvider implements ResourceProvider
             if ($uri === 'ish://stubs/Project/Config.php') {
                 return $this->generateConfigStub();
             }
+            if ($uri === 'ish://stubs/Project/Conventions.php') {
+                return $this->generateConventionsStub();
+            }
         }
 
         $relPath = substr($uri, 12);
@@ -123,5 +132,69 @@ final class IshStubsResourceProvider implements ResourceProvider
         }
         $php .= "}\n";
         return $php;
+    }
+
+    private function generateConventionsStub(): string
+    {
+        return <<<'PHP'
+<?php
+
+/**
+ * Auto-generated stub defining Ishmael framework conventions.
+ * Use this as a reference for expected class structures and naming.
+ */
+
+namespace Ishmael\Conventions;
+
+interface ModelConvention
+{
+    /**
+     * Primary key naming convention.
+     */
+    public const PRIMARY_KEY_PATTERN = '{singular_table}_id';
+
+    /**
+     * Timestamp column names.
+     */
+    public const CREATED_AT = 'created_at';
+    public const UPDATED_AT = 'updated_at';
+
+    /**
+     * Auditing column names.
+     */
+    public const CREATED_BY = 'created_by';
+    public const UPDATED_BY = 'updated_by';
+
+    /**
+     * Soft delete column name.
+     */
+    public const DELETED_AT = 'deleted_at';
+}
+
+interface ControllerConvention
+{
+    /**
+     * Expected suffix for all controller classes.
+     */
+    public const SUFFIX = 'Controller';
+}
+
+interface ServiceConvention
+{
+    /**
+     * Expected suffix for all service classes.
+     */
+    public const SUFFIX = 'Service';
+}
+
+class DatabaseConventions
+{
+    public const DEFAULT_ENGINE = 'MySQL';
+    public const TABLE_NAMING = 'snake_case_plural';
+    public const PRIMARY_KEY_PATTERN = '{singular_table}_id';
+    public const FOREIGN_KEY_PATTERN = '{singular_table}_id';
+    public const CASE_POLICY = 'snake_case_only_for_tables';
+}
+PHP;
     }
 }

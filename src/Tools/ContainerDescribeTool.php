@@ -135,28 +135,31 @@ final class ContainerDescribeTool implements Tool
 
 
 
+    private static ?array $cache = null;
+
     public function execute(array $input): array
     {
+        $idFilter = $input['id'] ?? null;
+
+        if (self::$cache !== null && $idFilter === null) {
+            return self::$cache;
+        }
+
         $root = $this->context->getRoot();
         if ($root === null) {
             return ['services' => [], 'aliases' => []];
         }
 
-        // Try standard locations for bootstrap
+        // ... existing bootstrap logic ...
         $bootstrap = $root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'ishmael' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php';
         
         if (!file_exists($bootstrap)) {
-            // Fallback to my-app specific location if we are testing or if structure differs
             $bootstrap = $root . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php';
         }
 
         if (!file_exists($bootstrap)) {
-             // If we still can't find it, we might be in a dev environment for the framework itself
              $bootstrap = $root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
         }
-
-        $idFilter = $input['id'] ?? null;
-        // The tag filter is currently not supported by the minimal app() helper but we keep it for schema compatibility
 
         $code = <<<'PHP'
 <?php
@@ -230,7 +233,6 @@ PHP;
         @unlink($tempFile);
 
         if ($exitCode !== 0) {
-            // Potentially log or return error
             return ['services' => [], 'aliases' => [], 'error' => trim($stderr)];
         }
 
@@ -239,7 +241,9 @@ PHP;
             return ['services' => [], 'aliases' => []];
         }
 
-        if ($idFilter) {
+        if ($idFilter === null) {
+            self::$cache = $data;
+        } else {
             $data['services'] = array_values(array_filter($data['services'], fn($s) => $s['id'] === $idFilter));
         }
 

@@ -79,6 +79,32 @@ final class ModuleDependencyMapperTest extends TestCase
         $this->assertEquals('service', $edge['type']);
     }
 
+    public function testMapFlagsGodModules(): void
+    {
+        $this->createModule('God', [
+            'dependencies' => ['A', 'B', 'C', 'D', 'E', 'F']
+        ]);
+        foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $m) {
+            $this->createModule($m, []);
+        }
+
+        $context = new ProjectContext($this->tempRoot, null, []);
+        $mapper = new ModuleDependencyMapper($context);
+        $result = $mapper->map();
+
+        $godNode = null;
+        foreach ($result['nodes'] as $node) {
+            if ($node['id'] === 'God') {
+                $godNode = $node;
+                break;
+            }
+        }
+
+        $this->assertNotNull($godNode);
+        $this->assertTrue($godNode['architecture']['is_god_module']);
+        $this->assertStringContainsString('splitting', $godNode['architecture']['suggestion']);
+    }
+
     private function createModule(string $name, array $manifest): void
     {
         $path = $this->tempRoot . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . $name;

@@ -47,48 +47,88 @@
 
 
 
-        public function listResources(): array
-        {
+    public function listResources(): array
+    {
+        $items = [
+            [
+                'uri' => 'ish://docs/index',
+                'name' => 'Ishmael Documentation Index',
+                'description' => 'A structured map of all available documentation, categorized by type.',
+                'mimeType' => 'application/json',
+            ]
+        ];
 
-            $items = [];
-
-            foreach ($this->roots as $root) {
-                // Only index if within sandbox and directory exists
-
-                if (!$this->sandbox->isWithinRoot($root) || !is_dir($root)) {
-                    continue;
-                }
-
-                $this->scanDocsRoot($root, $items);
+        foreach ($this->roots as $root) {
+            // Only index if within sandbox and directory exists
+            if (!$this->sandbox->isWithinRoot($root) || !is_dir($root)) {
+                continue;
             }
 
-            // De-dupe by id
-
-            $byId = [];
-
-            foreach ($items as $it) {
-                $byId[$it['uri']] = $it;
-            }
-
-            return array_values($byId);
+            $this->scanDocsRoot($root, $items);
         }
 
+        // De-dupe by id
+        $byId = [];
+        foreach ($items as $it) {
+            $byId[$it['uri']] = $it;
+        }
 
+        return array_values($byId);
+    }
 
-        public function readResource(string $uri): ?string
-        {
-            if (!str_starts_with($uri, 'docs:')) {
-                return null;
-            }
+    public function readResource(string $uri): ?string
+    {
+        if ($uri === 'ish://docs/index') {
+            return $this->generateDocsIndex();
+        }
 
-            $resources = $this->listResources();
-            foreach ($resources as $res) {
-                if ($res['uri'] === $uri && isset($res['path']) && is_file($res['path'])) {
-                    return file_get_contents($res['path']);
-                }
-            }
+        if (!str_starts_with($uri, 'docs:')) {
             return null;
         }
+
+        $resources = $this->listResources();
+        foreach ($resources as $res) {
+            if ($res['uri'] === $uri && isset($res['path']) && is_file($res['path'])) {
+                return file_get_contents($res['path']);
+            }
+        }
+        return null;
+    }
+
+    private function generateDocsIndex(): string
+    {
+        $resources = $this->listResources();
+        $index = [
+            'tutorials' => [],
+            'guides' => [],
+            'concepts' => [],
+            'api' => [],
+            'other' => [],
+        ];
+
+        foreach ($resources as $res) {
+            if ($res['uri'] === 'ish://docs/index') {
+                continue;
+            }
+
+            $uri = $res['uri'];
+            $name = $res['name'];
+
+            if (str_contains($uri, 'guide/blog-part')) {
+                $index['tutorials'][] = ['uri' => $uri, 'name' => $name];
+            } elseif (str_contains($uri, 'guide/')) {
+                $index['guides'][] = ['uri' => $uri, 'name' => $name];
+            } elseif (str_contains($uri, 'concepts/')) {
+                $index['concepts'][] = ['uri' => $uri, 'name' => $name];
+            } elseif (str_contains($uri, 'api/')) {
+                $index['api'][] = ['uri' => $uri, 'name' => $name];
+            } else {
+                $index['other'][] = ['uri' => $uri, 'name' => $name];
+            }
+        }
+
+        return json_encode($index, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
 
         /** @param array<int, array<string,mixed>> $items */
         private function scanDocsRoot(string $root, array &$items): void

@@ -40,6 +40,7 @@ final class MakeControllerTool implements Tool
                 'module' => ['type' => 'string', 'description' => 'Target module name.'],
                 'name' => ['type' => 'string', 'description' => 'Controller name.'],
                 'invokable' => ['type' => 'boolean', 'description' => 'Generate an invokable controller.'],
+                'api' => ['type' => 'boolean', 'description' => 'Generate an API controller (standard JSON responses and HTTP status codes).'],
                 'templates' => ['type' => ['string', 'null'], 'description' => 'Override template source directory.'],
                 'preview' => ['type' => 'boolean', 'description' => 'Preview the generated code without writing to disk.'],
             ],
@@ -82,6 +83,9 @@ final class MakeControllerTool implements Tool
         $options = [];
         if (!empty($input['invokable'])) {
             $options['invokable'] = true;
+        }
+        if (!empty($input['api'])) {
+            $options['api'] = true;
         }
         if (isset($input['templates'])) {
             $options['templates'] = $input['templates'];
