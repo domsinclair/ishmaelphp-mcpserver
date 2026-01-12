@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.18](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.17...v0.7.18) (2026-01-12)
+
+
+### Miscellaneous Chores
+
+* allow for new file uploading in the framework. ([0a1aacd](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/0a1aacd461c18aa8bdb5e081fabec4b79ced8b88))
+
 ## [0.7.17](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.16...v0.7.17) (2026-01-10)
 
 
