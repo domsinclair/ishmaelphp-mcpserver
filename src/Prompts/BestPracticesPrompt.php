@@ -28,8 +28,9 @@ final class BestPracticesPrompt implements Prompt
                     'text' => "When working with the IshmaelPHP framework, please follow these best practices:\n\n" .
                         "1. **Use the CLI for Scaffolding**: Always prefer using the `ish` CLI tools (e.g., `ish:make:module`, `ish:make:controller`) instead of writing PHP boilerplate manually. This ensures that namespaces, directory structures, and framework conventions are strictly followed.\n" .
                         "2. **Module-First Architecture**: Keep business logic organized within the `Modules` directory. Each module should be self-contained with its own controllers, routes, and views.\n" .
-                        "3. **Environment Validation**: Before starting, run `ish:env:validate` to ensure the local environment meets the application's requirements.\n" .
-                        "4. **Database Migrations**: Use `ish:migrate` and `ish:make:migration` to manage database schema changes rather than manual SQL execution."
+                        "3. **File Handling & Storage**: Use the `UploadedFile` class via `Request::file()` for handling uploads. Use the `StorageInterface` for file operations to remain storage-agnostic. Avoid direct access to `$_FILES` or manual `move_uploaded_file()` calls.\n" .
+                        "4. **Environment Validation**: Before starting, run `ish:env:validate` to ensure the local environment meets the application's requirements.\n" .
+                        "5. **Database Migrations**: Use `ish:migrate` and `ish:make:migration` to manage database schema changes rather than manual SQL execution."
                 ]
             ]
         ];

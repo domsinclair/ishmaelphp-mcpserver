@@ -27,7 +27,7 @@ final class MakeControllerTool implements Tool
 
     public function getDescription(): string
     {
-        return 'Create a controller class inside a module.';
+        return 'Create a controller class inside a module. Automatically uses Request::file() and Response::download() for file operations if applicable.';
     }
 
     public function getInputSchema(): array

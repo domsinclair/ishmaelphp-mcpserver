@@ -40,7 +40,7 @@ final class LintTool implements Tool
     public function getDescription(): string
     {
 
-        return 'Run PHPStan/Psalm/PHPCS and return structured findings (incubation: capability report).';
+        return 'Run PHPStan/Psalm/PHPCS and return structured findings. Supports new framework types like UploadedFile and StorageInterface.';
     }
 
 

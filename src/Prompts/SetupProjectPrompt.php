@@ -36,7 +36,8 @@ final class SetupProjectPrompt implements Prompt
                         "1. **Validate Environment**: Run the `ish:env:validate` tool to check for missing dependencies or configuration issues.\n" .
                         "2. **Initialize Database**: If you haven't already, run `ish:migrate` to set up your database schema.\n" .
                         "3. **Create your first module**: Use `ish:make:module <Name>` to start building your application logic.\n" .
-                        "4. **Set up IDE**: If you are using PhpStorm, use `ide:setup-run-configs` to add Ishmael commands to your IDE Run menu."
+                        "4. **Path Helpers**: Use `public_path()` and `storage_path()` to resolve absolute paths to the `public/` and `storage/` directories respectively.\n" .
+                        "5. **Set up IDE**: If you are using PhpStorm, use `ide:setup-run-configs` to add Ishmael commands to your IDE Run menu."
                 ]
             ]
         ];

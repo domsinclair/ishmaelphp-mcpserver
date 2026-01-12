@@ -32,7 +32,7 @@ final class ProjectInfoTool implements Tool
     public function getDescription(): string
     {
 
-        return 'Return discovered project root, resolved vendor binaries, and sandbox status (read-only).';
+        return 'Return discovered project root, resolved vendor binaries, and sandbox status (read-only). Includes awareness of UploadedFile and StorageInterface.';
     }
 
 

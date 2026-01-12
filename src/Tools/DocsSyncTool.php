@@ -74,6 +74,8 @@ final class DocsSyncTool implements Tool
         }
 
         $source = $input['source'] ?? 'github';
+        
+        // Priority: Use Docs directory at the root of the app.
         $targetDir = $root . DIRECTORY_SEPARATOR . 'Docs';
 
         if (!is_dir($targetDir)) {

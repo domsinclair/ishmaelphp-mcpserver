@@ -143,8 +143,6 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     $root = $context->getRoot();
     $docsProvider = new DocsResourceProvider($sandbox, [
         $root . DIRECTORY_SEPARATOR . 'Docs',
-        $root . DIRECTORY_SEPARATOR . 'Docs' . DIRECTORY_SEPARATOR . 'Core',
-        dirname($context->getIshBinary(), 2) . DIRECTORY_SEPARATOR . 'Documentation',
     ]);
     $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
     $ishStubs = new IshStubsResourceProvider($sandbox, dirname($context->getIshBinary(), 2), $context);
