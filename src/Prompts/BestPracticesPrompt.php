@@ -30,7 +30,9 @@ final class BestPracticesPrompt implements Prompt
                         "2. **Module-First Architecture**: Keep business logic organized within the `Modules` directory. Each module should be self-contained with its own controllers, routes, and views.\n" .
                         "3. **File Handling & Storage**: Use the `UploadedFile` class via `Request::file()` for handling uploads. Use the `StorageInterface` for file operations to remain storage-agnostic. Avoid direct access to `$_FILES` or manual `move_uploaded_file()` calls.\n" .
                         "4. **Environment Validation**: Before starting, run `ish:env:validate` to ensure the local environment meets the application's requirements.\n" .
-                        "5. **Database Migrations**: Use `ish:migrate` and `ish:make:migration` to manage database schema changes rather than manual SQL execution."
+                        "5. **Database Migrations**: Use `ish:migrate` and `ish:make:migration` to manage database schema changes rather than manual SQL execution.\n" .
+                        "6. **Consult First (Architect Strategy)**: When asked to create a module or schema, refer to the 'Architect' strategy in `Docs/Core/how-to/framing-questions.md`. Always consult with the user regarding their environment (e.g., SQLite vs. MySQL), database preferences (Soft Deletes, Auditing), and UI stack (CSS/JS) before generating implementation code.\n" .
+                        "7. **Vanilla JS Preference (Performance)**: AI is exceptionally proficient at writing Vanilla JS. Unless the user specifies a library (like Alpine.js or HTMX), encourage the **Standard Library Pattern** (creating a centralized `resources/js/core.js` with reusable functions) to ensure high-performance, future-proof code with zero library overhead."
                 ]
             ]
         ];
