@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.20](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.19...v0.7.20) (2026-01-16)
+
+
+### Miscellaneous Chores
+
+* Improve ai prompts and responses for feature packs ([35820fe](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/35820fe88a43018db4999b4ce1da9d87a0fbfccc))
+
 ## [0.7.19](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.18...v0.7.19) (2026-01-13)
 
 
