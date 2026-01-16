@@ -79,6 +79,8 @@ final class FeaturePackCreateTool implements Tool
 
                 'confirm' => ['type' => 'boolean'],
 
+                'generateRegistrySnippet' => ['type' => 'boolean', 'description' => 'If true, generates an XML snippet for registry.xml'],
+
             ],
 
         ];
@@ -100,6 +102,8 @@ final class FeaturePackCreateTool implements Tool
                 'dryRun' => ['type' => 'boolean'],
 
                 'targetPath' => ['type' => 'string'],
+
+                'registrySnippet' => ['type' => 'string', 'description' => 'XML snippet for registry.xml'],
 
                 'conflicts' => ['type' => 'array', 'items' => ['type' => 'string']],
 
@@ -162,6 +166,8 @@ final class FeaturePackCreateTool implements Tool
         $license = isset($input['license']) && is_string($input['license']) ? $input['license'] : 'MIT';
 
         $confirm = (bool)($input['confirm'] ?? false);
+
+        $generateRegistrySnippet = (bool)($input['generateRegistrySnippet'] ?? false);
 
         $repoInit = (bool)($input['repoInit'] ?? false); // currently ignored (no VCS ops)
 
@@ -327,7 +333,10 @@ final class FeaturePackCreateTool implements Tool
 
         $dryRun = !$confirm;
 
-
+        $registrySnippet = '';
+        if ($generateRegistrySnippet) {
+            $registrySnippet = $this->generateRegistrySnippet($vendor, $name, $description, $license);
+        }
 
         if ($confirm) {
             // Do not write if conflicts detected
@@ -348,6 +357,8 @@ final class FeaturePackCreateTool implements Tool
             'dryRun' => $dryRun,
 
             'targetPath' => $targetPath,
+
+            'registrySnippet' => $registrySnippet,
 
             'files' => $planFiles,
 
@@ -460,5 +471,40 @@ final class FeaturePackCreateTool implements Tool
         }
 
         return substr($content, 0, $max) . "\n...";
+    }
+
+    private function generateRegistrySnippet(string $vendor, string $name, string $description, string $license): string
+    {
+        $packageName = strtolower($vendor) . '/' . strtolower($name);
+        $title = ucfirst($vendor) . ' ' . ucfirst($name);
+        $synopsis = $description !== '' ? $description : ($name . ' Feature Pack for Ishmael');
+        $zipName = strtolower($name) . '.zip';
+        $installCmd = "ish feature:install " . $zipName;
+        
+        // License type detection logic similar to ish CLI
+        $type = 'community';
+        if (stripos($license, 'commercial') !== false || stripos($license, 'proprietary') !== false) {
+            $type = 'commercial';
+        }
+
+        $xml = "    <!-- Entry for a " . ucfirst($type) . " Feature Pack -->\n";
+        $xml .= "    <feature name=\"" . htmlspecialchars($packageName) . "\">\n";
+        $xml .= "        <title>" . htmlspecialchars($title) . "</title>\n";
+        $xml .= "        <category>General</category>\n";
+        $xml .= "        <synopsis>" . htmlspecialchars($synopsis) . "</synopsis>\n";
+        
+        if ($type === 'commercial') {
+            $xml .= "        <license type=\"commercial\" enforcement=\"development\" trial=\"true\" />\n";
+        } else {
+            $xml .= "        <license type=\"community\" enforcement=\"none\" />\n";
+        }
+        
+        $xml .= "        <install-command>" . htmlspecialchars($installCmd) . "</install-command>\n";
+        $xml .= "        <author>\n";
+        $xml .= "            <name>" . htmlspecialchars(ucfirst($vendor)) . "</name>\n";
+        $xml .= "        </author>\n";
+        $xml .= "    </feature>\n";
+
+        return $xml;
     }
 }

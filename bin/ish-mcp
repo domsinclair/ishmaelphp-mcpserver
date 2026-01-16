@@ -56,6 +56,7 @@ use Ishmael\McpServer\Server\Server;
 use Ishmael\McpServer\Tools\HealthVersionTool;
 use Ishmael\McpServer\Tools\ProjectInfoTool;
 use Ishmael\McpServer\Tools\FeaturePackListTool;
+use Ishmael\McpServer\Tools\FeaturePackPackTool;
 use Ishmael\McpServer\Tools\FeaturePackCreateTool;
 use Ishmael\McpServer\Tools\TestTool;
 use Ishmael\McpServer\Tools\LintTool;
@@ -102,6 +103,7 @@ if ($context->getRoot() === null) {
 }
 $router->registerTool(new ProjectInfoTool($context));
 $router->registerTool(new FeaturePackListTool($context));
+$router->registerTool(new FeaturePackPackTool($context));
 $router->registerTool(new FeaturePackCreateTool($context));
 $router->registerTool(new TestTool($context));
 $router->registerTool(new LintTool($context));
