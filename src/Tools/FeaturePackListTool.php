@@ -34,7 +34,7 @@ final class FeaturePackListTool implements Tool
     public function getDescription(): string
     {
 
-        return 'List available Feature Packs from local templates and curated index (read-only).';
+        return 'List available Feature Packs from local templates, curated index, and the centralized registry.';
     }
 
 
@@ -155,6 +155,27 @@ final class FeaturePackListTool implements Tool
 
             if (!isset($packs[$key])) {
                 $packs[$key] = $p;
+            }
+        }
+
+        $registry = new FeaturePackRegistryTool();
+        $registryResult = $registry->execute($filters);
+        
+        if (isset($registryResult['features']) && is_array($registryResult['features'])) {
+            foreach ($registryResult['features'] as $f) {
+                $key = $f['name'] . '|zip';
+                if (!isset($packs[$key])) {
+                    $packs[$key] = [
+                        'name' => $f['title'],
+                        'description' => $f['synopsis'],
+                        'version' => 'registry',
+                        'package' => $f['name'],
+                        'repoUrl' => $f['distribution']['url'] ?? null,
+                        'keywords' => $f['capabilities'] ?? [],
+                        'stability' => 'stable',
+                        'source' => 'central-registry',
+                    ];
+                }
             }
         }
 

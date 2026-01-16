@@ -102,6 +102,7 @@
             'tutorials' => [],
             'guides' => [],
             'concepts' => [],
+            'feature-packs' => [],
             'api' => [],
             'other' => [],
         ];
@@ -120,6 +121,8 @@
                 $index['guides'][] = ['uri' => $uri, 'name' => $name];
             } elseif (str_contains($uri, 'concepts/')) {
                 $index['concepts'][] = ['uri' => $uri, 'name' => $name];
+            } elseif (str_starts_with($uri, 'docs:feature-packs/')) {
+                $index['feature-packs'][] = ['uri' => $uri, 'name' => $name];
             } elseif (str_contains($uri, 'api/')) {
                 $index['api'][] = ['uri' => $uri, 'name' => $name];
             } else {
@@ -137,6 +140,8 @@
                 return;
             }
 
+            $isModulesRoot = basename($root) === 'Modules';
+
             $directory = new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS);
             $iterator = new \RecursiveIteratorIterator($directory);
 
@@ -148,7 +153,18 @@
 
                 $path = $file->getPathname();
                 $relPath = str_replace($root . DIRECTORY_SEPARATOR, '', $path);
-                $uriPath = str_replace(DIRECTORY_SEPARATOR, '/', $relPath);
+                
+                // If scanning Modules root, we only care about files in {Module}/Docs/
+                if ($isModulesRoot) {
+                    if (!preg_match('~^([^' . preg_quote(DIRECTORY_SEPARATOR) . ']+)' . preg_quote(DIRECTORY_SEPARATOR) . 'Docs' . preg_quote(DIRECTORY_SEPARATOR) . '(.*)$~i', $relPath, $matches)) {
+                        continue;
+                    }
+                    $moduleName = $matches[1];
+                    $subPath = $matches[2];
+                    $uriPath = 'feature-packs/' . $moduleName . '/' . str_replace(DIRECTORY_SEPARATOR, '/', $subPath);
+                } else {
+                    $uriPath = str_replace(DIRECTORY_SEPARATOR, '/', $relPath);
+                }
 
                 // Handle Markdown files
                 if (preg_match('~\.md$~i', $relPath) === 1) {
@@ -157,7 +173,7 @@
                     $items[] = [
                         'uri' => 'docs:' . $slug,
                         'name' => basename($relPath),
-                        'description' => 'Documentation: ' . $relPath,
+                        'description' => 'Documentation: ' . ($isModulesRoot ? "Module $moduleName - $subPath" : $relPath),
                         'mimeType' => 'text/markdown',
                         'path' => $path,
                     ];

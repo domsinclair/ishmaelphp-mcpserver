@@ -74,6 +74,7 @@ use Ishmael\McpServer\Tools\EnvDriftTool;
 use Ishmael\McpServer\Tools\ProjectSnapshotTool;
 use Ishmael\McpServer\Tools\SetupRunConfigsTool;
 use Ishmael\McpServer\Tools\FeaturePackInstallTool;
+use Ishmael\McpServer\Tools\FeaturePackRegistryTool;
 use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
 use Ishmael\McpServer\Tools\RoutesListTool;
 use Ishmael\McpServer\Tools\ModuleDependencyTool;
@@ -119,6 +120,7 @@ $router->registerTool(new EnvDriftTool($context));
 $router->registerTool(new ProjectSnapshotTool($context));
 $router->registerTool(new SetupRunConfigsTool($context));
 $router->registerTool(new FeaturePackInstallTool($context));
+$router->registerTool(new FeaturePackRegistryTool());
 $router->registerTool(new FeaturePackIntegrateTool($context));
 $router->registerTool(new RoutesListTool($context));
 $router->registerTool(new ModuleDependencyTool($context));
@@ -143,6 +145,7 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     $root = $context->getRoot();
     $docsProvider = new DocsResourceProvider($sandbox, [
         $root . DIRECTORY_SEPARATOR . 'Docs',
+        $root . DIRECTORY_SEPARATOR . 'Modules',
     ]);
     $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
     $ishStubs = new IshStubsResourceProvider($sandbox, dirname($context->getIshBinary(), 2), $context);
