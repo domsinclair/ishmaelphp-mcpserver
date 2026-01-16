@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.21](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.20...v0.7.21) (2026-01-16)
+
+
+### Miscellaneous Chores
+
+* Further changes to improve feature packs in line with the main framework ([ddfb0f5](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/ddfb0f50afdf187ca8daa3255547e8736d29a161))
+
 ## [0.7.20](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.19...v0.7.20) (2026-01-16)
 
 
