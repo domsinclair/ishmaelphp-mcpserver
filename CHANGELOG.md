@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.22](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.21...v0.7.22) (2026-01-22)
+
+
+### Miscellaneous Chores
+
+* Fixes to ensure mcp knows about feature licencing ([6257932](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/6257932b8caeca4603adbe985a7644c1e9a9ff79))
+
 ## [0.7.21](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.20...v0.7.21) (2026-01-16)
 
 
