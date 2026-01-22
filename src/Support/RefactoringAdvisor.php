@@ -107,7 +107,8 @@ final class RefactoringAdvisor
     private function analyzeCoupling(array $metadata): array
     {
         $coupling = [];
-        
+        $root = $this->context->getRoot();
+
         foreach ($metadata as $moduleName => $classes) {
             $externalDependencies = [];
             foreach ($classes as $className => $data) {
@@ -125,10 +126,25 @@ final class RefactoringAdvisor
             }
 
             foreach ($externalDependencies as $target => $count) {
-                if ($count > 3) {
+                $reason = "Direct dependency count ({$count}) between modules.";
+                $isPremium = false;
+
+                // Check if the target module is a premium module
+                if ($root !== null) {
+                    $manifestPath = $root . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . $target . DIRECTORY_SEPARATOR . 'module.json';
+                    if (is_file($manifestPath)) {
+                        $manifest = json_decode(file_get_contents($manifestPath), true);
+                        if (isset($manifest['tier']) && in_array($manifest['tier'], ['commercial', 'dual'])) {
+                            $isPremium = true;
+                            $reason .= " WARNING: '{$target}' is a PREMIUM module and requires a license/trial for some capabilities.";
+                        }
+                    }
+                }
+
+                if ($count > 3 || $isPremium) {
                     $coupling[$moduleName . ' -> ' . $target] = [
                         'score' => $count,
-                        'reason' => "High direct dependency count ({$count}) between modules. Consider if these should be merged or use a shared base."
+                        'reason' => $reason . ($count > 3 ? " Consider if these should be merged or use a shared base." : "")
                     ];
                 }
             }

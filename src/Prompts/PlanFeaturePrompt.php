@@ -59,7 +59,12 @@ final class PlanFeaturePrompt implements Prompt
                         "### 5. Reference Documentation\n" .
                         "- Core Philosophy: `docs:ai-manifesto`\n" .
                         "- Framework Conventions: `docs:conventions`\n" .
-                        "- Documentation Index: `ish://docs/index` (use this to find relevant tutorials or guides)\n\n" .
+                        "- Documentation Index: `ish://docs/index` (use this to find relevant tutorials or guides)\n" .
+                        "- Licensing Strategy: `docs:licensing` (Consult before using premium capabilities)\n\n" .
+                        "### 6. Licensing & Capabilities\n" .
+                        "- Always check if the planned feature depends on premium modules or capabilities using `ish:capabilities:describe <ModuleName>`.\n" .
+                        "- If a premium capability is required, check its availability status. If 'Trial Required', suggest starting a trial to the user.\n" .
+                        "- Do not bypass licensing checks. If a `CapabilityException` occurs, it indicates a required license or trial." .
                         "Please refine your requirements if you need a more specific sequence of commands."
                 ]
             ]

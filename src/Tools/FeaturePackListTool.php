@@ -98,6 +98,8 @@ final class FeaturePackListTool implements Tool
 
                             'requires' => ['type' => 'array', 'items' => ['type' => 'string']],
 
+                            'tier' => ['type' => ['string', 'null'], 'description' => 'community, commercial, or dual'],
+
                             'stability' => ['type' => 'string'],
 
                             'source' => ['type' => 'string'],
