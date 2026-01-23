@@ -51,6 +51,7 @@ use Ishmael\McpServer\Providers\IshAiManifestoResourceProvider;
 use Ishmael\McpServer\Providers\IshCliMetadataResourceProvider;
 use Ishmael\McpServer\Providers\IshHealthResourceProvider;
 use Ishmael\McpServer\Providers\AiContextResourceProvider;
+use Ishmael\McpServer\Providers\IntentMapResourceProvider;
 use Ishmael\McpServer\Server\RequestRouter;
 use Ishmael\McpServer\Server\Server;
 use Ishmael\McpServer\Tools\HealthVersionTool;
@@ -89,9 +90,10 @@ use Ishmael\McpServer\Prompts\SetupProjectPrompt;
 use Ishmael\McpServer\Prompts\PlanFeaturePrompt;
 use Ishmael\McpServer\Prompts\TroubleshootPrompt;
 use Ishmael\McpServer\Prompts\DatabaseDesignPrompt;
+use Ishmael\McpServer\Prompts\IntentRouterPrompt;
 use Ishmael\McpServer\Project\ProjectContext;
-
 use Ishmael\McpServer\Support\IshToolDiscoverer;
+use Ishmael\McpServer\Support\IntentMapper;
 
 $version = require __DIR__ . '/../version.php';
 $transport = new StdioTransport();
@@ -144,6 +146,10 @@ $staticResources = new StaticResourceProvider([
     ['id' => 'docs:getting-started', 'description' => 'Getting started with Ishmael'],
 ]);
 
+$intentMapPath = __DIR__ . '/../resources/intent-map.json';
+$intentMapper = new IntentMapper($intentMapPath);
+$intentMapProvider = new IntentMapResourceProvider($intentMapPath);
+
 if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     $sandbox = $context->getSandbox();
     $root = $context->getRoot();
@@ -161,6 +167,7 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
 
     $resources = new AggregateResourceProvider([
         $staticResources,
+        $intentMapProvider,
         $docsProvider,
         $templatesProvider,
         $ishStubs,
@@ -171,13 +178,14 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
         $aiContext
     ]);
 } else {
-    $resources = new AggregateResourceProvider([$staticResources]);
+    $resources = new AggregateResourceProvider([$staticResources, $intentMapProvider]);
 }
 $bestPractices = new BestPracticesPrompt();
 $setupProject = new SetupProjectPrompt();
 $planFeature = new PlanFeaturePrompt();
 $troubleshoot = new TroubleshootPrompt();
 $databaseDesign = new DatabaseDesignPrompt();
+$intentRouter = new IntentRouterPrompt($intentMapper);
 
 $prompts = new StaticPromptProvider([
     ['id' => $bestPractices->getName(), 'description' => $bestPractices->getDescription()],
@@ -185,10 +193,11 @@ $prompts = new StaticPromptProvider([
     ['id' => $planFeature->getName(), 'description' => $planFeature->getDescription()],
     ['id' => $troubleshoot->getName(), 'description' => $troubleshoot->getDescription()],
     ['id' => $databaseDesign->getName(), 'description' => $databaseDesign->getDescription()],
+    ['id' => $intentRouter->getName(), 'description' => $intentRouter->getDescription()],
     ['id' => 'scaffold:controller', 'description' => 'Guide to scaffold a controller (dry-run)'],
     ['id' => 'prompt:generate-feature-pack', 'description' => 'Explain how to plan and author a new Feature Pack'],
     ['id' => 'prompt:integrate-feature-pack', 'description' => 'Explain integration steps for Feature Packs and how to apply them safely'],
-], [$bestPractices, $setupProject, $planFeature, $troubleshoot, $databaseDesign]);
+], [$bestPractices, $setupProject, $planFeature, $troubleshoot, $databaseDesign, $intentRouter]);
 
 $server = new Server($router, $transport, $resources, $prompts);
 $server->run();

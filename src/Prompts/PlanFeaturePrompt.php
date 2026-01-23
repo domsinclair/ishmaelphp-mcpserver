@@ -60,6 +60,7 @@ final class PlanFeaturePrompt implements Prompt
                         "- Core Philosophy: `docs:ai-manifesto`\n" .
                         "- Framework Conventions: `docs:conventions`\n" .
                         "- Documentation Index: `ish://docs/index` (use this to find relevant tutorials or guides)\n" .
+                        "- Semantic Intent Map: `ish://docs/intent-map` (Consult to ensure canonical intent alignment)\n" .
                         "- Licensing Strategy: `docs:licensing` (Consult before using premium capabilities)\n\n" .
                         "### 6. Licensing & Capabilities\n" .
                         "- Always check if the planned feature depends on premium modules or capabilities using `ish:capabilities:describe <ModuleName>`.\n" .

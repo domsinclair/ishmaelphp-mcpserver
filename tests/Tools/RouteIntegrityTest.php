@@ -132,4 +132,28 @@ final class RouteIntegrityTest extends TestCase
         $result = $checker->check($route);
         $this->assertTrue($result['valid']);
     }
+
+    public function testCheckHandlesDoubledPrefixBug(): void
+    {
+        // Define the controller class
+        $className = 'Modules\Home\Controllers\HomeController';
+        if (!class_exists($className)) {
+            eval('namespace Modules\Home\Controllers { class HomeController { public function index() {} } }');
+        }
+
+        $context = new ProjectContext($this->tempRoot, null, []);
+        $checker = new RouteIntegrityChecker($context);
+
+        // This simulates the bug where $handler already has the full namespace
+        $route = [
+            'method' => 'GET',
+            'path' => '/',
+            'handler' => 'Modules\Home\Controllers\HomeController@index',
+            'module' => 'Home'
+        ];
+
+        $result = $checker->check($route);
+
+        $this->assertTrue($result['valid'], $result['error'] ?? 'Expected route to be valid');
+    }
 }

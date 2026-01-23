@@ -1,0 +1,198 @@
+{
+  "glossary": {
+    "feature_pack": {
+      "description": "An IshmaelPHP feature pack (reusable plugin/module/addon)",
+      "synonyms": [
+        "feature pack",
+        "plugin",
+        "extension",
+        "addon"
+      ]
+    },
+    "licensing": {
+      "description": "Any form of licence, activation, or entitlement",
+      "synonyms": [
+        "license",
+        "licence",
+        "activation",
+        "seat",
+        "entitlement",
+        "subscription"
+      ]
+    },
+    "starter_project": {
+      "description": "An initial IshmaelPHP application scaffold",
+      "synonyms": [
+        "starter",
+        "bootstrap",
+        "new project",
+        "scaffold",
+        "starter project"
+      ]
+    },
+    "local_module": {
+      "description": "A project-specific module in the Modules/ directory",
+      "synonyms": [
+        "local module",
+        "app module",
+        "project module",
+        "module"
+      ]
+    },
+    "database": {
+      "description": "The database engine (SQLite, MySQL, PostgreSQL)",
+      "synonyms": [
+        "database",
+        "db",
+        "sql",
+        "storage",
+        "sqlite",
+        "mysql",
+        "postgres",
+        "postgresql"
+      ]
+    },
+    "ui_stack": {
+      "description": "The frontend technology stack (CSS/JS)",
+      "synonyms": [
+        "ui",
+        "frontend",
+        "stack",
+        "tailwind",
+        "bootstrap",
+        "htmx",
+        "alpine",
+        "stimulus",
+        "vanilla",
+        "typescript"
+      ]
+    },
+    "soft_deletes": {
+      "description": "Soft deletion capability",
+      "synonyms": [
+        "soft delete",
+        "trash",
+        "undo delete"
+      ]
+    },
+    "auditing": {
+      "description": "Action auditing (created_by/updated_by)",
+      "synonyms": [
+        "audit",
+        "auditing",
+        "tracking",
+        "history",
+        "paper trail"
+      ]
+    }
+  },
+  "intents": {
+    "create_local_module": {
+      "description": "User wants to create a new local module for their application",
+      "required_terms": ["local_module"],
+      "supporting_terms": ["create", "add", "make", "module"],
+      "confidence_threshold": 0.5,
+      "version": "1.0"
+    },
+    "design_feature_pack": {
+      "description": "User wants to design a new IshmaelPHP feature pack",
+      "required_terms": ["feature_pack"],
+      "supporting_terms": ["create", "build", "design", "make"],
+      "confidence_threshold": 0.6,
+      "version": "1.0"
+    },
+    "add_licensing_to_pack": {
+      "description": "User wants to add licensing to an existing feature pack",
+      "required_terms": ["feature_pack", "licensing"],
+      "supporting_terms": ["add", "enable", "protect"],
+      "confidence_threshold": 0.6,
+      "version": "1.0"
+    },
+    "scaffold_starter_project": {
+      "description": "User wants to create a new IshmaelPHP starter project",
+      "required_terms": ["starter_project"],
+      "supporting_terms": ["create", "new", "generate"],
+      "confidence_threshold": 0.6,
+      "version": "1.0"
+    }
+  },
+  "clarification_rules": {
+    "create_local_module": {
+      "required_context": [
+        "database_engine",
+        "ui_stack"
+      ],
+      "optional_context": [
+        "soft_deletes",
+        "auditing"
+      ],
+      "questions": {
+        "database_engine": "Which database engine are you using (SQLite, MySQL, or PostgreSQL)?",
+        "ui_stack": "What is your preferred UI stack (Tailwind/Bootstrap and HTMX/Alpine/Stimulus/Vanilla JS)?",
+        "soft_deletes": "Do you need 'Soft Deletes' (the ability to un-delete records)?",
+        "auditing": "Do you need 'Auditing' (tracking who created or updated records)?"
+      }
+    },
+    "design_feature_pack": {
+      "required_context": [
+        "target_environment",
+        "distribution_model"
+      ],
+      "questions": {
+        "target_environment": "Is this feature pack intended for development, production, or both?",
+        "distribution_model": "Will this feature pack be open-source, commercial, or internal?"
+      }
+    },
+    "add_licensing_to_pack": {
+      "required_context": [
+        "licensing_model"
+      ],
+      "questions": {
+        "licensing_model": "Do you want node-locked, seat-based, or subscription licensing?"
+      }
+    }
+  },
+  "behaviour_contracts": {
+    "create_local_module": {
+      "allowed_outputs": [
+        "ish_cli_commands",
+        "database_schema",
+        "service_logic",
+        "controller_actions"
+      ],
+      "must_reference": [
+        "cheat_sheet",
+        "framing_questions"
+      ],
+      "recommended_tools": [
+        "ish:make:module",
+        "ish:make:migration",
+        "ish:make:service",
+        "ish:make:controller"
+      ]
+    },
+    "design_feature_pack": {
+      "allowed_outputs": [
+        "directory_structure",
+        "manifest_schema",
+        "php_examples"
+      ],
+      "must_reference": [
+        "feature_pack_manifest"
+      ],
+      "forbidden": [
+        "runtime_secrets",
+        "production_credentials"
+      ]
+    },
+    "add_licensing_to_pack": {
+      "allowed_outputs": [
+        "licensing_schema",
+        "integration_steps"
+      ],
+      "must_reference": [
+        "licensing_core_entities"
+      ]
+    }
+  }
+}

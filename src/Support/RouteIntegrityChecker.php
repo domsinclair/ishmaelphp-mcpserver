@@ -61,9 +61,11 @@ final class RouteIntegrityChecker
 
         // Build FQCN based on Ishmael conventions
         if ($module === 'App') {
-            $class = "App\\Controllers\\{$controller}";
+            $prefix = 'App\\Controllers\\';
+            $class = str_starts_with($controller, $prefix) ? $controller : $prefix . $controller;
         } else {
-            $class = "Modules\\{$module}\\Controllers\\{$controller}";
+            $prefix = "Modules\\{$module}\\Controllers\\";
+            $class = str_starts_with($controller, $prefix) ? $controller : $prefix . $controller;
         }
 
         // Check if class exists
