@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.23](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.22...v0.7.23) (2026-01-23)
+
+
+### Miscellaneous Chores
+
+* Added intent mapper to server to generate better answers from agents ([a427899](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/a4278993c3754f34d6937096b61ad0d09190616d))
+
 ## [0.7.22](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.21...v0.7.22) (2026-01-22)
 
 
