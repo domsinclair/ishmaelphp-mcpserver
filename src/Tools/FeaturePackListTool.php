@@ -86,6 +86,10 @@ final class FeaturePackListTool implements Tool
 
                             'name' => ['type' => 'string'],
 
+                            'title' => ['type' => 'string'],
+
+                            'synopsis' => ['type' => ['string','null']],
+
                             'description' => ['type' => ['string','null']],
 
                             'version' => ['type' => 'string'],
@@ -146,6 +150,8 @@ final class FeaturePackListTool implements Tool
             $local = new LocalTemplateScanner($sandbox, $root);
 
             foreach ($local->list($filters) as $p) {
+                $p['title'] = $p['title'] ?? $p['name'];
+                $p['synopsis'] = $p['synopsis'] ?? $p['description'] ?? null;
                 $packs[$p['name'] . '|' . ($p['package'] ?? '')] = $p;
             }
         }
@@ -156,6 +162,8 @@ final class FeaturePackListTool implements Tool
             $key = ($p['name'] ?? '') . '|' . ($p['package'] ?? '');
 
             if (!isset($packs[$key])) {
+                $p['title'] = $p['title'] ?? $p['name'];
+                $p['synopsis'] = $p['synopsis'] ?? $p['description'] ?? null;
                 $packs[$key] = $p;
             }
         }
@@ -169,7 +177,9 @@ final class FeaturePackListTool implements Tool
                 if (!isset($packs[$key])) {
                     $packs[$key] = [
                         'name' => $f['name'],
-                        'description' => null, // No longer provided by registry v0.1
+                        'title' => $f['title'] ?? $f['name'],
+                        'synopsis' => $f['synopsis'] ?? null,
+                        'description' => $f['synopsis'] ?? null,
                         'version' => 'registry',
                         'package' => $f['package'],
                         'repoUrl' => $f['distribution']['url'] ?? null,

@@ -60,6 +60,8 @@ class FeaturePackRegistryToolTest extends TestCase
         $this->assertArrayHasKey('features', $result);
         $this->assertCount(1, $result['features']);
         $this->assertEquals('cms-lite', $result['features'][0]['name']);
+        $this->assertEquals('cms-lite', $result['features'][0]['title']);
+        $this->assertEquals('Lightweight CMS features', $result['features'][0]['synopsis']);
         $this->assertEquals('acme-corp/cms-lite', $result['features'][0]['package']);
         $this->assertEquals('commercial', $result['features'][0]['tier']);
         $this->assertEquals('https://vtlsoftware.co.uk/packs/cms-lite-1.2.0.zip', $result['features'][0]['distribution']['url']);
@@ -98,6 +100,8 @@ XML;
         $this->assertArrayHasKey('features', $result);
         $this->assertCount(1, $result['features']);
         $this->assertEquals('blog', $result['features'][0]['name']);
+        $this->assertEquals('blog', $result['features'][0]['title']);
+        $this->assertEquals('', $result['features'][0]['synopsis']);
         $this->assertEquals('community', $result['features'][0]['tier']);
         $this->assertEquals(['content'], $result['features'][0]['capabilities']);
 

@@ -66,7 +66,9 @@ final class FeaturePackRegistryTool implements Tool
                         'type' => 'object',
                         'properties' => [
                             'name' => ['type' => 'string', 'description' => 'Canonical identifier (id)'],
-                            'package' => ['type' => 'string', 'description' => 'Canonical identifier (id)'],
+                            'title' => ['type' => 'string', 'description' => 'Human readable title'],
+                            'synopsis' => ['type' => 'string', 'description' => 'Short description'],
+                            'package' => ['type' => 'string', 'description' => 'Composer package name'],
                             'tier' => ['type' => 'string', 'description' => 'community or commercial'],
                             'distribution' => [
                                 'type' => 'object',
@@ -129,9 +131,10 @@ final class FeaturePackRegistryTool implements Tool
             $content = @file_get_contents($registryUrl, false, $context);
             
             if ($content === false) {
+                $error = error_get_last();
                 return [
                     'features' => [],
-                    'error' => 'Could not fetch registry from ' . $registryUrl
+                    'error' => 'Could not fetch registry from ' . $registryUrl . ($error ? ': ' . $error['message'] : '')
                 ];
             }
 
@@ -167,15 +170,17 @@ final class FeaturePackRegistryTool implements Tool
 
         foreach ($packs as $pack) {
             $name = $pack['name'] ?? '';
+            $description = $pack['description'] ?? '';
             $package = $pack['package'] ?? $name;
             $vendor = $pack['vendor'] ?? '';
             $license = $pack['license'] ?? 'community';
             $download = $pack['download'] ?? '';
             $capabilities = $pack['capabilities'] ?? [];
 
-            // Filtering by query (name or capabilities)
+            // Filtering by query (name, description or capabilities)
             if ($query) {
                 $match = str_contains(strtolower($name), $query) ||
+                         str_contains(strtolower($description), $query) ||
                          str_contains(strtolower($package), $query) ||
                          in_array($query, array_map('strtolower', $capabilities));
                 
@@ -184,6 +189,8 @@ final class FeaturePackRegistryTool implements Tool
 
             $features[] = [
                 'name' => $name,
+                'title' => $name,
+                'synopsis' => $description,
                 'package' => $package,
                 'tier' => $license,
                 'distribution' => [
@@ -211,6 +218,7 @@ final class FeaturePackRegistryTool implements Tool
             $vendor = (string)$fp->vendor;
             $license = (string)$fp->license;
             $download = (string)$fp->download;
+            $description = (string)($fp->description ?? '');
             
             $capabilities = [];
             if (isset($fp->capabilities)) {
@@ -219,9 +227,10 @@ final class FeaturePackRegistryTool implements Tool
                 }
             }
 
-            // Filtering by query (id or capabilities)
+            // Filtering by query (id, description or capabilities)
             if ($query) {
                 $match = str_contains(strtolower($id), $query) ||
+                         str_contains(strtolower($description), $query) ||
                          in_array($query, array_map('strtolower', $capabilities));
                 
                 if (!$match) continue;
@@ -229,6 +238,8 @@ final class FeaturePackRegistryTool implements Tool
 
             $features[] = [
                 'name' => $id,
+                'title' => $id,
+                'synopsis' => $description,
                 'package' => $id,
                 'tier' => $license,
                 'distribution' => [
