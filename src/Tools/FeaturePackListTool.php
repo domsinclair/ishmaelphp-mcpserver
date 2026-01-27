@@ -160,7 +160,7 @@ final class FeaturePackListTool implements Tool
             }
         }
 
-        $registry = new FeaturePackRegistryTool();
+        $registry = new FeaturePackRegistryTool($this->context);
         $registryResult = $registry->execute($filters);
         
         if (isset($registryResult['features']) && is_array($registryResult['features'])) {
@@ -168,12 +168,13 @@ final class FeaturePackListTool implements Tool
                 $key = $f['name'] . '|zip';
                 if (!isset($packs[$key])) {
                     $packs[$key] = [
-                        'name' => $f['title'],
-                        'description' => $f['synopsis'],
+                        'name' => $f['name'],
+                        'description' => null, // No longer provided by registry v0.1
                         'version' => 'registry',
-                        'package' => $f['name'],
+                        'package' => $f['package'],
                         'repoUrl' => $f['distribution']['url'] ?? null,
                         'keywords' => $f['capabilities'] ?? [],
+                        'tier' => $f['tier'] ?? 'community',
                         'stability' => 'stable',
                         'source' => 'central-registry',
                     ];
