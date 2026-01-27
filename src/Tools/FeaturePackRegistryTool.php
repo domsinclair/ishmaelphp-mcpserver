@@ -17,7 +17,7 @@ final class FeaturePackRegistryTool implements Tool
     /**
      * The default registry URL.
      */
-    private const DEFAULT_REGISTRY_URL = 'http://vtl-ishmael-registry.test/registry/feature-packs.xml';
+    private const DEFAULT_REGISTRY_URL = 'http://vtl-ishmael-registry.test/registry/feature-packs.json';
 
     private ?ProjectContext $context;
 
@@ -126,62 +126,121 @@ final class FeaturePackRegistryTool implements Tool
                 'http' => ['timeout' => 5]
             ]);
             
-            $xmlContent = @file_get_contents($registryUrl, false, $context);
+            $content = @file_get_contents($registryUrl, false, $context);
             
-            if ($xmlContent === false) {
+            if ($content === false) {
                 return [
                     'features' => [],
                     'error' => 'Could not fetch registry from ' . $registryUrl
                 ];
             }
 
-            $xml = new SimpleXMLElement($xmlContent);
-            $features = [];
-
-            $query = isset($input['query']) ? strtolower($input['query']) : null;
-
-            foreach ($xml->{'feature-pack'} as $fp) {
-                $id = (string)$fp->id;
-                $vendor = (string)$fp->vendor;
-                $license = (string)$fp->license;
-                $download = (string)$fp->download;
-                
-                $capabilities = [];
-                if (isset($fp->capabilities)) {
-                    foreach ($fp->capabilities->capability as $cap) {
-                        $capabilities[] = (string)$cap['id'];
-                    }
+            $data = json_decode($content, true);
+            if ($data === null) {
+                // Fallback for XML if it's still returning XML or if json_decode failed
+                try {
+                    return $this->parseXml($content, $input);
+                } catch (Exception $e) {
+                    return [
+                        'features' => [],
+                        'error' => 'Error parsing registry (JSON/XML): ' . $e->getMessage()
+                    ];
                 }
-
-                // Filtering by query (id or capabilities)
-                if ($query) {
-                    $match = str_contains(strtolower($id), $query) ||
-                             in_array($query, array_map('strtolower', $capabilities));
-                    
-                    if (!$match) continue;
-                }
-
-                $features[] = [
-                    'name' => $id,
-                    'package' => $id,
-                    'tier' => $license,
-                    'distribution' => [
-                        'url' => $download,
-                    ],
-                    'capabilities' => $capabilities,
-                    'author' => [
-                        'name' => $vendor,
-                    ],
-                ];
             }
 
-            return ['features' => $features];
+            return $this->parseJson($data, $input);
 
         } catch (Exception $e) {
             return [
                 'features' => [],
-                'error' => 'Error parsing registry: ' . $e->getMessage()
+                'error' => 'Error processing registry: ' . $e->getMessage()
             ];
         }
+    }
+
+    private function parseJson(array $data, array $input): array
+    {
+        $features = [];
+        $query = isset($input['query']) ? strtolower($input['query']) : null;
+
+        $packs = $data['result']['packs'] ?? $data['packs'] ?? [];
+
+        foreach ($packs as $pack) {
+            $name = $pack['name'] ?? '';
+            $package = $pack['package'] ?? $name;
+            $vendor = $pack['vendor'] ?? '';
+            $license = $pack['license'] ?? 'community';
+            $download = $pack['download'] ?? '';
+            $capabilities = $pack['capabilities'] ?? [];
+
+            // Filtering by query (name or capabilities)
+            if ($query) {
+                $match = str_contains(strtolower($name), $query) ||
+                         str_contains(strtolower($package), $query) ||
+                         in_array($query, array_map('strtolower', $capabilities));
+                
+                if (!$match) continue;
+            }
+
+            $features[] = [
+                'name' => $name,
+                'package' => $package,
+                'tier' => $license,
+                'distribution' => [
+                    'url' => $download,
+                ],
+                'capabilities' => $capabilities,
+                'author' => [
+                    'name' => $vendor,
+                ],
+            ];
+        }
+
+        return ['features' => $features];
+    }
+
+    private function parseXml(string $xmlContent, array $input): array
+    {
+        $xml = new SimpleXMLElement($xmlContent);
+        $features = [];
+
+        $query = isset($input['query']) ? strtolower($input['query']) : null;
+
+        foreach ($xml->{'feature-pack'} as $fp) {
+            $id = (string)$fp->id;
+            $vendor = (string)$fp->vendor;
+            $license = (string)$fp->license;
+            $download = (string)$fp->download;
+            
+            $capabilities = [];
+            if (isset($fp->capabilities)) {
+                foreach ($fp->capabilities->capability as $cap) {
+                    $capabilities[] = (string)$cap['id'];
+                }
+            }
+
+            // Filtering by query (id or capabilities)
+            if ($query) {
+                $match = str_contains(strtolower($id), $query) ||
+                         in_array($query, array_map('strtolower', $capabilities));
+                
+                if (!$match) continue;
+            }
+
+            $features[] = [
+                'name' => $id,
+                'package' => $id,
+                'tier' => $license,
+                'distribution' => [
+                    'url' => $download,
+                ],
+                'capabilities' => $capabilities,
+                'author' => [
+                    'name' => $vendor,
+                ],
+            ];
+        }
+
+        return ['features' => $features];
     }
 }
