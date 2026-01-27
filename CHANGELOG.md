@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.26](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.25...v0.7.26) (2026-01-27)
+
+
+### Bug Fixes
+
+* corrected connection to external registry server ([e5a6628](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/e5a66280a200641c3917f737622e45e00509d37b))
+
 ## [0.7.25](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.24...v0.7.25) (2026-01-27)
 
 
