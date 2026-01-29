@@ -132,23 +132,50 @@ final class FeaturePackRegistryTool implements Tool
             
             if ($content === false) {
                 $error = error_get_last();
+                $errorMessage = 'Could not fetch registry from ' . $registryUrl;
+                if ($error) {
+                    $errorMessage .= ': ' . $error['message'];
+                }
+                
+                // Add DNS diagnostic info if it's a connection failure
+                $host = parse_url($registryUrl, PHP_URL_HOST);
+                if ($host) {
+                    $ip = gethostbyname($host);
+                    $errorMessage .= " (Host: $host, Resolved IP: $ip)";
+                }
+
                 return [
                     'features' => [],
-                    'error' => 'Could not fetch registry from ' . $registryUrl . ($error ? ': ' . $error['message'] : '')
+                    'error' => $errorMessage
                 ];
             }
 
             $data = json_decode($content, true);
-            if ($data === null) {
-                // Fallback for XML if it's still returning XML or if json_decode failed
-                try {
-                    return $this->parseXml($content, $input);
-                } catch (Exception $e) {
-                    return [
-                        'features' => [],
-                        'error' => 'Error parsing registry (JSON/XML): ' . $e->getMessage()
-                    ];
+            if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                $jsonError = json_last_error_msg();
+                // Fallback for XML if it's still returning XML
+                if (str_starts_with(trim($content), '<')) {
+                    try {
+                        $xmlResult = $this->parseXml($content, $input);
+                        if (!empty($xmlResult['features'])) {
+                            return $xmlResult;
+                        }
+                    } catch (Exception $e) {
+                        // Ignore XML error if JSON was expected
+                    }
                 }
+
+                return [
+                    'features' => [],
+                    'error' => "JSON Decode Error: $jsonError. Raw response starts with: " . substr(trim($content), 0, 100)
+                ];
+            }
+
+            if ($data === null) {
+                return [
+                    'features' => [],
+                    'error' => 'Registry returned empty or invalid response.'
+                ];
             }
 
             return $this->parseJson($data, $input);

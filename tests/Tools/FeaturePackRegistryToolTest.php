@@ -108,6 +108,40 @@ XML;
         $this->recursiveRmdir($fakeRoot);
     }
 
+    public function testExecuteReturnsErrorOnInvalidJson(): void
+    {
+        file_put_contents($this->tempFile, "not a json and not a xml");
+
+        $fakeRoot = $this->createFakeProject(['registry_url' => str_replace('\\', '/', $this->tempFile)]);
+        $context = $this->createMock(ProjectContext::class);
+        $context->method('getRoot')->willReturn($fakeRoot);
+
+        $tool = new FeaturePackRegistryTool($context);
+        $result = $tool->execute([]);
+
+        $this->assertArrayHasKey('error', $result);
+        $this->assertStringContainsString('JSON Decode Error', $result['error']);
+        $this->assertStringContainsString('Raw response starts with: not a json', $result['error']);
+
+        $this->recursiveRmdir($fakeRoot);
+    }
+
+    public function testExecuteReturnsDetailedErrorOnConnectionFailure(): void
+    {
+        $fakeRoot = $this->createFakeProject(['registry_url' => 'http://non-existent-domain-vtl.test/registry.json']);
+        $context = $this->createMock(ProjectContext::class);
+        $context->method('getRoot')->willReturn($fakeRoot);
+
+        $tool = new FeaturePackRegistryTool($context);
+        $result = $tool->execute([]);
+
+        $this->assertArrayHasKey('error', $result);
+        $this->assertStringContainsString('Could not fetch registry', $result['error']);
+        $this->assertStringContainsString('Resolved IP:', $result['error']);
+
+        $this->recursiveRmdir($fakeRoot);
+    }
+
     private function createFakeProject(array $config): string
     {
         $fakeRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ishmael_test_' . uniqid();

@@ -118,6 +118,8 @@ final class FeaturePackListTool implements Tool
 
                 ],
 
+                'registryError' => ['type' => 'string', 'description' => 'Detailed error if the central registry could not be reached.'],
+
             ],
 
         ];
@@ -171,6 +173,11 @@ final class FeaturePackListTool implements Tool
         $registry = new FeaturePackRegistryTool($this->context);
         $registryResult = $registry->execute($filters);
         
+        $registryError = null;
+        if (isset($registryResult['error'])) {
+            $registryError = $registryResult['error'];
+        }
+
         if (isset($registryResult['features']) && is_array($registryResult['features'])) {
             foreach ($registryResult['features'] as $f) {
                 $key = $f['name'] . '|zip';
@@ -192,12 +199,13 @@ final class FeaturePackListTool implements Tool
             }
         }
 
-
-
         // Note: Composer/Packagist aggregation can be added in a future iteration.
 
+        $result = [ 'packs' => array_values($packs) ];
+        if ($registryError) {
+            $result['registryError'] = $registryError;
+        }
 
-
-        return [ 'packs' => array_values($packs) ];
+        return $result;
     }
 }
