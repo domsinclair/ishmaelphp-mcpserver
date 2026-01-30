@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.30](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.29...v0.7.30) (2026-01-30)
+
+
+### Bug Fixes
+
+* mcp server adjusted to handle new registry server output. ([871cdd7](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/871cdd7432cfdfb89d254656131760c4f5cd77e4))
+
 ## [0.7.29](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.28...v0.7.29) (2026-01-30)
 
 
