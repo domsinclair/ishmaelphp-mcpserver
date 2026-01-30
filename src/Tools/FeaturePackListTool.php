@@ -49,13 +49,12 @@ final class FeaturePackListTool implements Tool
             'additionalProperties' => false,
 
             'properties' => [
-
                 'query' => ['type' => 'string'],
-
                 'vendorPrefix' => ['type' => 'string'],
-
                 'includePrerelease' => ['type' => 'boolean'],
-
+                'project_type' => ['type' => 'string', 'description' => 'Optional project type for context-aware scoring.'],
+                'deployment' => ['type' => 'string', 'description' => 'Optional deployment environment.'],
+                'ui_required' => ['type' => 'boolean', 'description' => 'Whether a UI is required.'],
             ],
 
         ];
@@ -103,7 +102,9 @@ final class FeaturePackListTool implements Tool
                             'requires' => ['type' => 'array', 'items' => ['type' => 'string']],
 
                             'tier' => ['type' => ['string', 'null'], 'description' => 'community, commercial, or dual'],
-
+                            'license_enforcement' => ['type' => 'string', 'description' => 'none, required, or optional'],
+                            'score' => ['type' => 'number', 'description' => 'Relevance score'],
+                            'category' => ['type' => 'string'],
                             'stability' => ['type' => 'string'],
 
                             'source' => ['type' => 'string'],
@@ -131,13 +132,12 @@ final class FeaturePackListTool implements Tool
     {
 
         $filters = [
-
             'query' => isset($input['query']) && is_string($input['query']) ? $input['query'] : null,
-
             'vendorPrefix' => isset($input['vendorPrefix']) && is_string($input['vendorPrefix']) ? $input['vendorPrefix'] : null,
-
             'includePrerelease' => (bool)($input['includePrerelease'] ?? false),
-
+            'project_type' => $input['project_type'] ?? null,
+            'deployment' => $input['deployment'] ?? null,
+            'ui_required' => isset($input['ui_required']) ? (bool)$input['ui_required'] : null,
         ];
 
 
@@ -192,6 +192,9 @@ final class FeaturePackListTool implements Tool
                         'repoUrl' => $f['distribution']['url'] ?? null,
                         'keywords' => $f['capabilities'] ?? [],
                         'tier' => $f['tier'] ?? 'community',
+                        'license_enforcement' => $f['license_enforcement'] ?? 'none',
+                        'score' => $f['score'] ?? 0,
+                        'category' => $f['category'] ?? '',
                         'stability' => 'stable',
                         'source' => 'central-registry',
                     ];
@@ -199,7 +202,12 @@ final class FeaturePackListTool implements Tool
             }
         }
 
-        // Note: Composer/Packagist aggregation can be added in a future iteration.
+        // Sort by score descending if multiple sources are present, otherwise maintain local priority
+        uasort($packs, function($a, $b) {
+            $scoreA = $a['score'] ?? 0;
+            $scoreB = $b['score'] ?? 0;
+            return $scoreB <=> $scoreA;
+        });
 
         $result = [ 'packs' => array_values($packs) ];
         if ($registryError) {

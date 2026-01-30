@@ -126,6 +126,83 @@ XML;
         $this->recursiveRmdir($fakeRoot);
     }
 
+    public function testExecuteParsesJsonRegistryV04(): void
+    {
+        $json = json_encode([
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'registryVersion' => '0.4',
+            'result' => [
+                'packs' => [
+                    [
+                        'slug' => 'cms-lite',
+                        'title' => 'CMS Lite',
+                        'description' => 'Lightweight CMS features',
+                        'category' => 'content',
+                        'license_type' => 'commercial',
+                        'license_enforcement' => 'required',
+                        'vendor' => [
+                            'id' => 2,
+                            'name' => 'acme-corp',
+                            'email' => 'support@acme-corp.com',
+                            'url' => 'https://acme-corp.com'
+                        ],
+                        'version' => '1.2.0',
+                        'capabilities' => ['content', 'admin-ui'],
+                        'download' => 'https://vtlsoftware.co.uk/packs/cms-lite-1.2.0.zip',
+                        'tags' => [],
+                        'score' => 10
+                    ],
+                    [
+                        'slug' => 'analytics-lite',
+                        'title' => 'Analytics Lite',
+                        'description' => 'Basic metrics',
+                        'category' => 'analytics',
+                        'license_type' => 'community',
+                        'license_enforcement' => 'none',
+                        'vendor' => [
+                            'id' => 3,
+                            'name' => 'datawise',
+                            'email' => 'contact@datawise.io',
+                            'url' => 'https://datawise.io'
+                        ],
+                        'version' => '1.0.0',
+                        'capabilities' => ['analytics'],
+                        'download' => 'https://vtlsoftware.co.uk/packs/analytics-1.0.0.zip',
+                        'tags' => [],
+                        'score' => 50
+                    ]
+                ]
+            ]
+        ]);
+
+        file_put_contents($this->tempFile, $json);
+
+        $fakeRoot = $this->createFakeProject(['registry_url' => str_replace('\\', '/', $this->tempFile)]);
+        $context = $this->createMock(ProjectContext::class);
+        $context->method('getRoot')->willReturn($fakeRoot);
+
+        $tool = new FeaturePackRegistryTool($context);
+        // Pass some context to check URL building (though it's hard to verify here without mocking file_get_contents)
+        $result = $tool->execute(['project_type' => 'blog', 'ui_required' => true]);
+
+        $this->assertArrayHasKey('features', $result);
+        $this->assertCount(2, $result['features']);
+        
+        // Verify sorting (highest score first)
+        $this->assertEquals('analytics-lite', $result['features'][0]['name']);
+        $this->assertEquals(50, $result['features'][0]['score']);
+        
+        $this->assertEquals('cms-lite', $result['features'][1]['name']);
+        $this->assertEquals('CMS Lite', $result['features'][1]['title']);
+        $this->assertEquals('commercial', $result['features'][1]['tier']);
+        $this->assertEquals('required', $result['features'][1]['license_enforcement']);
+        $this->assertEquals('acme-corp', $result['features'][1]['author']['name']);
+        $this->assertEquals('support@acme-corp.com', $result['features'][1]['author']['email']);
+
+        $this->recursiveRmdir($fakeRoot);
+    }
+
     public function testExecuteReturnsDetailedErrorOnConnectionFailure(): void
     {
         $fakeRoot = $this->createFakeProject(['registry_url' => 'http://non-existent-domain-vtl.test/registry.json']);

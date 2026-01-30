@@ -50,6 +50,18 @@ final class FeaturePackRegistryTool implements Tool
                     'type' => 'string',
                     'description' => 'Optional category filter.'
                 ],
+                'project_type' => [
+                    'type' => 'string',
+                    'description' => 'Optional project type for context-aware scoring (e.g., blog, e-commerce, api).'
+                ],
+                'deployment' => [
+                    'type' => 'string',
+                    'description' => 'Optional deployment environment (e.g., cloud, on-premise, docker).'
+                ],
+                'ui_required' => [
+                    'type' => 'boolean',
+                    'description' => 'Whether a UI is required for the feature pack.'
+                ],
             ],
         ];
     }
@@ -65,11 +77,14 @@ final class FeaturePackRegistryTool implements Tool
                     'items' => [
                         'type' => 'object',
                         'properties' => [
-                            'name' => ['type' => 'string', 'description' => 'Canonical identifier (id)'],
+                            'name' => ['type' => 'string', 'description' => 'Canonical identifier (slug/id)'],
                             'title' => ['type' => 'string', 'description' => 'Human readable title'],
                             'synopsis' => ['type' => 'string', 'description' => 'Short description'],
-                            'package' => ['type' => 'string', 'description' => 'Composer package name'],
+                            'package' => ['type' => 'string', 'description' => 'Composer package name (deprecated in 0.4)'],
                             'tier' => ['type' => 'string', 'description' => 'community or commercial'],
+                            'license_enforcement' => ['type' => 'string', 'description' => 'none, required, or optional'],
+                            'category' => ['type' => 'string', 'description' => 'Feature pack category'],
+                            'score' => ['type' => 'number', 'description' => 'Relevance score'],
                             'distribution' => [
                                 'type' => 'object',
                                 'properties' => [
@@ -84,6 +99,8 @@ final class FeaturePackRegistryTool implements Tool
                                 'type' => 'object',
                                 'properties' => [
                                     'name' => ['type' => 'string'],
+                                    'email' => ['type' => 'string'],
+                                    'url' => ['type' => 'string'],
                                 ]
                             ],
                         ],
@@ -121,6 +138,22 @@ final class FeaturePackRegistryTool implements Tool
     {
         try {
             $registryUrl = $this->getRegistryUrl();
+
+            // Append context parameters to the URL for scoring/filtering
+            $params = [];
+            if (isset($input['query'])) $params['query'] = $input['query'];
+            if (isset($input['category'])) $params['category'] = $input['category'];
+            if (isset($input['project_type'])) $params['project_type'] = $input['project_type'];
+            if (isset($input['deployment'])) $params['deployment'] = $input['deployment'];
+            if (isset($input['ui_required'])) $params['ui_required'] = $input['ui_required'] ? '1' : '0';
+
+            // Filter out query/category from URL params if the target is a local file
+            $isLocalFile = (str_starts_with($registryUrl, '/') || str_contains($registryUrl, ':\\') || str_contains($registryUrl, ':/'));
+            
+            if (!empty($params) && !$isLocalFile) {
+                $separator = (str_contains($registryUrl, '?')) ? '&' : '?';
+                $registryUrl .= $separator . http_build_query($params);
+            }
 
             // Note: In a real-world scenario, we'd use a more robust HTTP client and caching.
             // For now, simple file_get_contents with a timeout should suffice for demonstration.
@@ -192,21 +225,47 @@ final class FeaturePackRegistryTool implements Tool
     {
         $features = [];
         $query = isset($input['query']) ? strtolower($input['query']) : null;
+        $version = $data['registryVersion'] ?? '0.2';
 
         $packs = $data['result']['packs'] ?? $data['packs'] ?? [];
 
         foreach ($packs as $pack) {
-            $name = $pack['name'] ?? '';
-            $description = $pack['description'] ?? '';
-            $package = $pack['package'] ?? $name;
-            $vendor = $pack['vendor'] ?? '';
-            $license = $pack['license'] ?? 'community';
-            $download = $pack['download'] ?? '';
-            $capabilities = $pack['capabilities'] ?? [];
+            if ($version === '0.4') {
+                $name = $pack['slug'] ?? '';
+                $title = $pack['title'] ?? $name;
+                $description = $pack['description'] ?? '';
+                $package = ''; // Removed in 0.4
+                $license = $pack['license_type'] ?? 'community';
+                $enforcement = $pack['license_enforcement'] ?? 'none';
+                $vendor = $pack['vendor'] ?? [];
+                $vendorName = $vendor['name'] ?? '';
+                $vendorEmail = $vendor['email'] ?? '';
+                $vendorUrl = $vendor['url'] ?? '';
+                $download = $pack['download'] ?? '';
+                $capabilities = $pack['capabilities'] ?? [];
+                $category = $pack['category'] ?? '';
+                $score = $pack['score'] ?? 0;
+            } else {
+                // Legacy 0.2
+                $name = $pack['name'] ?? '';
+                $title = $name;
+                $description = $pack['description'] ?? '';
+                $package = $pack['package'] ?? $name;
+                $license = $pack['license'] ?? 'community';
+                $enforcement = 'none';
+                $vendorName = $pack['vendor'] ?? '';
+                $vendorEmail = '';
+                $vendorUrl = '';
+                $download = $pack['download'] ?? '';
+                $capabilities = $pack['capabilities'] ?? [];
+                $category = $pack['category'] ?? '';
+                $score = 0;
+            }
 
             // Filtering by query (name, description or capabilities)
             if ($query) {
                 $match = str_contains(strtolower($name), $query) ||
+                         str_contains(strtolower($title), $query) ||
                          str_contains(strtolower($description), $query) ||
                          str_contains(strtolower($package), $query) ||
                          in_array($query, array_map('strtolower', $capabilities));
@@ -216,19 +275,29 @@ final class FeaturePackRegistryTool implements Tool
 
             $features[] = [
                 'name' => $name,
-                'title' => $name,
+                'title' => $title,
                 'synopsis' => $description,
                 'package' => $package,
                 'tier' => $license,
+                'license_enforcement' => $enforcement,
+                'category' => $category,
+                'score' => $score,
                 'distribution' => [
                     'url' => $download,
                 ],
                 'capabilities' => $capabilities,
                 'author' => [
-                    'name' => $vendor,
+                    'name' => $vendorName,
+                    'email' => $vendorEmail,
+                    'url' => $vendorUrl,
                 ],
             ];
         }
+
+        // Sort by score descending if scores are present
+        usort($features, function($a, $b) {
+            return $b['score'] <=> $a['score'];
+        });
 
         return ['features' => $features];
     }
