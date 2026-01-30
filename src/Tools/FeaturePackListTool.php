@@ -180,14 +180,15 @@ final class FeaturePackListTool implements Tool
 
         if (isset($registryResult['features']) && is_array($registryResult['features'])) {
             foreach ($registryResult['features'] as $f) {
-                $key = $f['name'] . '|zip';
+                // Use name and version to distinguish between different versions of the same pack
+                $key = $f['name'] . '|' . ($f['version'] ?? 'registry');
                 if (!isset($packs[$key])) {
                     $packs[$key] = [
                         'name' => $f['name'],
                         'title' => $f['title'] ?? $f['name'],
                         'synopsis' => $f['synopsis'] ?? null,
                         'description' => $f['synopsis'] ?? null,
-                        'version' => 'registry',
+                        'version' => $f['version'] ?? 'registry',
                         'package' => $f['package'],
                         'repoUrl' => $f['distribution']['url'] ?? null,
                         'keywords' => $f['capabilities'] ?? [],

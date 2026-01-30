@@ -66,6 +66,7 @@ class FeaturePackRegistryToolTest extends TestCase
         $this->assertEquals('commercial', $result['features'][0]['tier']);
         $this->assertEquals('https://vtlsoftware.co.uk/packs/cms-lite-1.2.0.zip', $result['features'][0]['distribution']['url']);
         $this->assertEquals(['content', 'media'], $result['features'][0]['capabilities']);
+        $this->assertEquals('1.2.0', $result['features'][0]['version']);
         $this->assertEquals('acme-corp', $result['features'][0]['author']['name']);
 
         $this->recursiveRmdir($fakeRoot);
@@ -80,6 +81,7 @@ class FeaturePackRegistryToolTest extends TestCase
         <id>blog</id>
         <vendor>example-author</vendor>
         <license>community</license>
+        <version>1.1.0</version>
         <download>https://vtlsoftware.co.uk/packs/blog-1.1.0.zip</download>
         <capabilities>
             <capability id="content" />
@@ -104,6 +106,7 @@ XML;
         $this->assertEquals('', $result['features'][0]['synopsis']);
         $this->assertEquals('community', $result['features'][0]['tier']);
         $this->assertEquals(['content'], $result['features'][0]['capabilities']);
+        $this->assertEquals('1.1.0', $result['features'][0]['version']);
 
         $this->recursiveRmdir($fakeRoot);
     }
@@ -154,6 +157,25 @@ XML;
                         'score' => 10
                     ],
                     [
+                        'slug' => 'cms-lite',
+                        'title' => 'CMS Lite',
+                        'description' => 'Lightweight CMS features',
+                        'category' => 'content',
+                        'license_type' => 'commercial',
+                        'license_enforcement' => 'required',
+                        'vendor' => [
+                            'id' => 2,
+                            'name' => 'acme-corp',
+                            'email' => 'support@acme-corp.com',
+                            'url' => 'https://acme-corp.com'
+                        ],
+                        'version' => '1.0.0',
+                        'capabilities' => ['content', 'admin-ui'],
+                        'download' => 'https://vtlsoftware.co.uk/packs/cms-lite-1.0.0.zip',
+                        'tags' => [],
+                        'score' => 5
+                    ],
+                    [
                         'slug' => 'analytics-lite',
                         'title' => 'Analytics Lite',
                         'description' => 'Basic metrics',
@@ -187,18 +209,17 @@ XML;
         $result = $tool->execute(['project_type' => 'blog', 'ui_required' => true]);
 
         $this->assertArrayHasKey('features', $result);
-        $this->assertCount(2, $result['features']);
+        $this->assertCount(3, $result['features']);
         
         // Verify sorting (highest score first)
         $this->assertEquals('analytics-lite', $result['features'][0]['name']);
         $this->assertEquals(50, $result['features'][0]['score']);
         
         $this->assertEquals('cms-lite', $result['features'][1]['name']);
-        $this->assertEquals('CMS Lite', $result['features'][1]['title']);
-        $this->assertEquals('commercial', $result['features'][1]['tier']);
-        $this->assertEquals('required', $result['features'][1]['license_enforcement']);
-        $this->assertEquals('acme-corp', $result['features'][1]['author']['name']);
-        $this->assertEquals('support@acme-corp.com', $result['features'][1]['author']['email']);
+        $this->assertEquals('1.2.0', $result['features'][1]['version']);
+
+        $this->assertEquals('cms-lite', $result['features'][2]['name']);
+        $this->assertEquals('1.0.0', $result['features'][2]['version']);
 
         $this->recursiveRmdir($fakeRoot);
     }

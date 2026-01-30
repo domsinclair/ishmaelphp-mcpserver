@@ -84,6 +84,7 @@ final class FeaturePackRegistryTool implements Tool
                             'tier' => ['type' => 'string', 'description' => 'community or commercial'],
                             'license_enforcement' => ['type' => 'string', 'description' => 'none, required, or optional'],
                             'category' => ['type' => 'string', 'description' => 'Feature pack category'],
+                            'version' => ['type' => 'string', 'description' => 'The specific version of the feature pack'],
                             'score' => ['type' => 'number', 'description' => 'Relevance score'],
                             'distribution' => [
                                 'type' => 'object',
@@ -241,6 +242,7 @@ final class FeaturePackRegistryTool implements Tool
                 $vendorName = $vendor['name'] ?? '';
                 $vendorEmail = $vendor['email'] ?? '';
                 $vendorUrl = $vendor['url'] ?? '';
+                $version_num = $pack['version'] ?? '1.0.0';
                 $download = $pack['download'] ?? '';
                 $capabilities = $pack['capabilities'] ?? [];
                 $category = $pack['category'] ?? '';
@@ -256,6 +258,7 @@ final class FeaturePackRegistryTool implements Tool
                 $vendorName = $pack['vendor'] ?? '';
                 $vendorEmail = '';
                 $vendorUrl = '';
+                $version_num = $pack['version'] ?? '1.0.0';
                 $download = $pack['download'] ?? '';
                 $capabilities = $pack['capabilities'] ?? [];
                 $category = $pack['category'] ?? '';
@@ -281,6 +284,7 @@ final class FeaturePackRegistryTool implements Tool
                 'tier' => $license,
                 'license_enforcement' => $enforcement,
                 'category' => $category,
+                'version' => $version_num,
                 'score' => $score,
                 'distribution' => [
                     'url' => $download,
@@ -314,6 +318,7 @@ final class FeaturePackRegistryTool implements Tool
             $vendor = (string)$fp->vendor;
             $license = (string)$fp->license;
             $download = (string)$fp->download;
+            $version_num = (string)($fp->version ?? '1.0.0');
             $description = (string)($fp->description ?? '');
             
             $capabilities = [];
@@ -338,6 +343,7 @@ final class FeaturePackRegistryTool implements Tool
                 'synopsis' => $description,
                 'package' => $id,
                 'tier' => $license,
+                'version' => $version_num,
                 'distribution' => [
                     'url' => $download,
                 ],
