@@ -107,6 +107,15 @@ final class FeaturePackListTool implements Tool
                             'category' => ['type' => 'string'],
                             'stability' => ['type' => 'string'],
 
+                            'author' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'name' => ['type' => 'string'],
+                                    'email' => ['type' => 'string'],
+                                    'url' => ['type' => 'string'],
+                                ]
+                            ],
+
                             'source' => ['type' => 'string'],
 
                         ],
@@ -196,6 +205,7 @@ final class FeaturePackListTool implements Tool
                         'license_enforcement' => $f['license_enforcement'] ?? 'none',
                         'score' => $f['score'] ?? 0,
                         'category' => $f['category'] ?? '',
+                        'author' => $f['author'] ?? ['name' => 'Unknown Author'],
                         'stability' => 'stable',
                         'source' => 'central-registry',
                     ];

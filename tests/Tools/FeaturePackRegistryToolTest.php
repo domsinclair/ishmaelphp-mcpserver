@@ -214,6 +214,9 @@ XML;
         // Verify sorting (highest score first)
         $this->assertEquals('analytics-lite', $result['features'][0]['name']);
         $this->assertEquals(50, $result['features'][0]['score']);
+        $this->assertEquals('datawise', $result['features'][0]['author']['name']);
+        $this->assertEquals('contact@datawise.io', $result['features'][0]['author']['email']);
+        $this->assertEquals('https://datawise.io', $result['features'][0]['author']['url']);
         
         $this->assertEquals('cms-lite', $result['features'][1]['name']);
         $this->assertEquals('1.2.0', $result['features'][1]['version']);

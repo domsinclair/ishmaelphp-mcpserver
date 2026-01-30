@@ -159,6 +159,10 @@
 
                 'stability' => $stability,
 
+                'author' => [
+                    'name' => 'Local Template',
+                ],
+
                 'source' => 'local-template',
 
                 'path' => $dir,
