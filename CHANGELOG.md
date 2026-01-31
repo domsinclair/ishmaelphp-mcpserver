@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.31](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.30...v0.7.31) (2026-01-31)
+
+
+### Miscellaneous Chores
+
+* added Semantic framework map ([5fd1395](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/5fd13953e8715f028fdcdbac6604e54dc0a48f2a))
+
 ## [0.7.30](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.29...v0.7.30) (2026-01-30)
 
 
