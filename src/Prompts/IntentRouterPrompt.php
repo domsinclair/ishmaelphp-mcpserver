@@ -49,7 +49,7 @@ final class IntentRouterPrompt implements Prompt
                                 "- Create a new local App Module for your project?\n" .
                                 "- Add licensing or protection to an existing module?\n" .
                                 "- Scaffold a brand new Ishmael project?\n\n" .
-                                "You can also check `ish://docs/intent-map` for a full list of concepts I understand."
+                                "You can also check `ish://docs/framework-map` (located in `Docs/Core/reference/framework-map.md`) for a semantic overview of the project structure, `ish://framework/introspection` for functional DNA, or `ish://docs/intent-map` for a full list of concepts I understand."
                     ]
                 ]
             ];

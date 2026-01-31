@@ -52,6 +52,8 @@ use Ishmael\McpServer\Providers\IshCliMetadataResourceProvider;
 use Ishmael\McpServer\Providers\IshHealthResourceProvider;
 use Ishmael\McpServer\Providers\AiContextResourceProvider;
 use Ishmael\McpServer\Providers\IntentMapResourceProvider;
+use Ishmael\McpServer\Providers\FrameworkMapResourceProvider;
+use Ishmael\McpServer\Providers\FrameworkIntrospectionProvider;
 use Ishmael\McpServer\Server\RequestRouter;
 use Ishmael\McpServer\Server\Server;
 use Ishmael\McpServer\Tools\HealthVersionTool;
@@ -150,6 +152,11 @@ $intentMapPath = __DIR__ . '/../resources/intent-map.json';
 $intentMapper = new IntentMapper($intentMapPath);
 $intentMapProvider = new IntentMapResourceProvider($intentMapPath);
 
+$frameworkMapPath = __DIR__ . '/../Docs/Core/reference/framework-map.md';
+$frameworkMapProvider = new FrameworkMapResourceProvider($frameworkMapPath);
+
+$introspectionProvider = new FrameworkIntrospectionProvider($context);
+
 if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     $sandbox = $context->getSandbox();
     $root = $context->getRoot();
@@ -168,6 +175,7 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     $resources = new AggregateResourceProvider([
         $staticResources,
         $intentMapProvider,
+        $frameworkMapProvider,
         $docsProvider,
         $templatesProvider,
         $ishStubs,
@@ -175,10 +183,11 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
         $ishAiManifesto,
         $cliMetadata,
         $projectHealth,
-        $aiContext
+        $aiContext,
+        $introspectionProvider
     ]);
 } else {
-    $resources = new AggregateResourceProvider([$staticResources, $intentMapProvider]);
+    $resources = new AggregateResourceProvider([$staticResources, $intentMapProvider, $frameworkMapProvider, $introspectionProvider]);
 }
 $bestPractices = new BestPracticesPrompt();
 $setupProject = new SetupProjectPrompt();

@@ -30,6 +30,7 @@ final class PlanFeaturePromptTest extends TestCase
         $this->assertStringContainsString('App-Specific Feature', $messages[1]['content']['text']);
         $this->assertStringContainsString('Feature Pack', $messages[1]['content']['text']);
         $this->assertStringContainsString('ish:make:controller', $messages[1]['content']['text']);
+        $this->assertStringContainsString('ish://docs/framework-map', $messages[1]['content']['text']);
     }
 
     public function testGetMessagesWithoutRequirements(): void
