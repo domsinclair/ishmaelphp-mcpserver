@@ -82,7 +82,8 @@
 
         public function logError(string $message): void
         {
-            fwrite($this->err, '[ish-mcp] ' . $message . "\n");
+            $prefix = sprintf('[ish-mcp] [%s] ', date('Y-m-d H:i:s'));
+            fwrite($this->err, $prefix . $message . "\n");
             fflush($this->err);
         }
     }

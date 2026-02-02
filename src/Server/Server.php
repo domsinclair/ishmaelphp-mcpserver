@@ -121,10 +121,12 @@
                         break;
                     case 'resources/read':
                         $uri = (string)($params['uri'] ?? '');
+                        $this->transport->logError("Reading resource: $uri");
                         $content = $this->resources->readResource($uri);
                         if ($content !== null) {
                             $response = ['result' => [ 'contents' => [['uri' => $uri, 'text' => $content]] ]];
                         } else {
+                            $this->transport->logError("Resource not found: $uri");
                             $response = ['error' => [ 'code' => -32602, 'message' => "Resource not found: {$uri}" ]];
                         }
                         break;
