@@ -28,7 +28,7 @@ class DatabaseConnectionFactory
     {
         $root = $this->context->getRoot();
         if ($root === null) {
-            throw new Exception("Cannot connect to database: Project root not found.");
+            throw new Exception("Cannot connect to database: Project root not found. Ensure you are running the MCP server within an Ishmael project or set ISH_PROJECT_ROOT.");
         }
 
         $env = $this->loadEnv($root);
@@ -49,6 +49,10 @@ class DatabaseConnectionFactory
                     if (file_exists($rootDb)) {
                         $database = $rootDb;
                     }
+                }
+
+                if (!file_exists($database)) {
+                    throw new Exception("SQLite database file not found: {$database}");
                 }
 
                 $pdo = new PDO('sqlite:' . $database);
