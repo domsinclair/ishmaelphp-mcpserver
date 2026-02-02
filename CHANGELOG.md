@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.34](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.33...v0.7.34) (2026-02-02)
+
+
+### Miscellaneous Chores
+
+* added database schema mapping provider ([4fa68ee](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/4fa68eee6bd0941115220fc38d57fe246366d99a))
+
 ## [0.7.33](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.32...v0.7.33) (2026-02-02)
 
 
