@@ -54,6 +54,7 @@ use Ishmael\McpServer\Providers\AiContextResourceProvider;
 use Ishmael\McpServer\Providers\IntentMapResourceProvider;
 use Ishmael\McpServer\Providers\FrameworkMapResourceProvider;
 use Ishmael\McpServer\Providers\FrameworkIntrospectionProvider;
+use Ishmael\McpServer\Providers\DatabaseSchemaProvider;
 use Ishmael\McpServer\Server\RequestRouter;
 use Ishmael\McpServer\Server\Server;
 use Ishmael\McpServer\Tools\HealthVersionTool;
@@ -96,6 +97,7 @@ use Ishmael\McpServer\Prompts\IntentRouterPrompt;
 use Ishmael\McpServer\Project\ProjectContext;
 use Ishmael\McpServer\Support\IshToolDiscoverer;
 use Ishmael\McpServer\Support\IntentMapper;
+use Ishmael\McpServer\Support\DatabaseConnectionFactory;
 
 $version = require __DIR__ . '/../version.php';
 $transport = new StdioTransport();
@@ -156,6 +158,8 @@ $frameworkMapPath = __DIR__ . '/../Docs/Core/reference/framework-map.md';
 $frameworkMapProvider = new FrameworkMapResourceProvider($frameworkMapPath);
 
 $introspectionProvider = new FrameworkIntrospectionProvider($context);
+$dbConnectionFactory = new DatabaseConnectionFactory($context);
+$dbSchemaProvider = new DatabaseSchemaProvider($dbConnectionFactory);
 
 if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     $sandbox = $context->getSandbox();
@@ -184,10 +188,11 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
         $cliMetadata,
         $projectHealth,
         $aiContext,
-        $introspectionProvider
+        $introspectionProvider,
+        $dbSchemaProvider
     ]);
 } else {
-    $resources = new AggregateResourceProvider([$staticResources, $intentMapProvider, $frameworkMapProvider, $introspectionProvider]);
+    $resources = new AggregateResourceProvider([$staticResources, $intentMapProvider, $frameworkMapProvider, $introspectionProvider, $dbSchemaProvider]);
 }
 $bestPractices = new BestPracticesPrompt();
 $setupProject = new SetupProjectPrompt();

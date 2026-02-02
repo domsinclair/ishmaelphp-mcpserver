@@ -67,7 +67,7 @@ final class DatabaseDesignPrompt implements Prompt
                         "- **Auditing & Soft Deletes**: Ishmael supports `created_by`, `updated_by`, and `deleted_at`.\n" .
                         "    - *Tip*: Ask the user if they need these. Auditing is good for accountability; soft deletes prevent accidental data loss but add query complexity.\n\n" .
                         "### 3. Current Project State\n" .
-                        "- Before creating new tables, let's see what already exists: `ish://stubs/Project/Tables.php`.\n" .
+                        "- Before creating new tables, let's see what already exists: `ish://database/schema`.\n" .
                         "- Check the database configuration: `ish:env:validate`.\n\n" .
                         "### 4. Proposed Workflow\n" .
                         "1. **Create Migration**: `ish:make:migration create_tableName_table`.\n" .
