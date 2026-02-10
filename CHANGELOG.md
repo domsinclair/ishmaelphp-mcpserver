@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.36](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.35...v0.7.36) (2026-02-10)
+
+
+### Bug Fixes
+
+* added McpStateTransitionTool ([5e84076](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/5e84076076f4745ac0f41554fef03e3bc060af5e))
+
 ## [0.7.35](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.34...v0.7.35) (2026-02-10)
 
 
