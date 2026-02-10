@@ -1,233 +1,235 @@
 #!/usr/bin/env php
 <?php
 
-declare(strict_types=1);
+    declare(strict_types=1);
 
-if (getenv('ISH_MCP_DEBUG')) {
-    ini_set('display_errors', '1');
-    error_reporting(E_ALL);
-} else {
-    ini_set('display_errors', '0');
-    error_reporting(0);
-}
-
-$cwd = getcwd();
-$autoloadPaths = [
-    // Standalone / dev
-    __DIR__ . '/../vendor/autoload.php',
-    // Consumer app root
-    $cwd ? ($cwd . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php') : null,
-    // Nested layouts
-    __DIR__ . '/../../../../../autoload.php',
-    __DIR__ . '/../../../../../../autoload.php',
-];
-
-$autoloadPaths = array_values(array_filter($autoloadPaths));
-
-$loaded = false;
-foreach ($autoloadPaths as $path) {
-    if (is_file($path)) {
-        require $path;
-        $loaded = true;
-        break;
+    if (getenv('ISH_MCP_DEBUG')) {
+        ini_set('display_errors', '1');
+        error_reporting(E_ALL);
+    } else {
+        ini_set('display_errors', '0');
+        error_reporting(0);
     }
-}
-if (!$loaded) {
-    fwrite(STDERR, "[ish-mcp] Autoloader not found. Checked:\n  - " . implode("\n  - ", $autoloadPaths) . "\n" .
-        "Ensure you ran 'composer install' in the project root.\n");
-    exit(1);
-}
 
-use Ishmael\McpServer\Protocol\StdioTransport;
-use Ishmael\McpServer\Providers\StaticPromptProvider;
-use Ishmael\McpServer\Providers\StaticResourceProvider;
-use Ishmael\McpServer\Providers\AggregateResourceProvider;
-use Ishmael\McpServer\Providers\DocsResourceProvider;
-use Ishmael\McpServer\Providers\TemplatesResourceProvider;
-use Ishmael\McpServer\Providers\PackageDocsResourceProvider;
-use Ishmael\McpServer\Providers\IshStubsResourceProvider;
-use Ishmael\McpServer\Providers\IshManifestResourceProvider;
-use Ishmael\McpServer\Providers\IshAiManifestoResourceProvider;
-use Ishmael\McpServer\Providers\IshCliMetadataResourceProvider;
-use Ishmael\McpServer\Providers\IshHealthResourceProvider;
-use Ishmael\McpServer\Providers\AiContextResourceProvider;
-use Ishmael\McpServer\Providers\IntentMapResourceProvider;
-use Ishmael\McpServer\Providers\FrameworkMapResourceProvider;
-use Ishmael\McpServer\Providers\FrameworkIntrospectionProvider;
-use Ishmael\McpServer\Providers\DatabaseSchemaProvider;
-use Ishmael\McpServer\Server\RequestRouter;
-use Ishmael\McpServer\Server\Server;
-use Ishmael\McpServer\Tools\HealthVersionTool;
-use Ishmael\McpServer\Tools\ProjectInfoTool;
-use Ishmael\McpServer\Tools\FeaturePackListTool;
-use Ishmael\McpServer\Tools\FeaturePackPackTool;
-use Ishmael\McpServer\Tools\FeaturePackCreateTool;
-use Ishmael\McpServer\Tools\TestTool;
-use Ishmael\McpServer\Tools\LintTool;
-use Ishmael\McpServer\Tools\LogTailTool;
-use Ishmael\McpServer\Tools\ContainerDescribeTool;
-use Ishmael\McpServer\Tools\CapabilitiesDescribeTool;
-use Ishmael\McpServer\Tools\MigrateTool;
-use Ishmael\McpServer\Tools\MakeModuleTool;
-use Ishmael\McpServer\Tools\ModulesCheckTool;
-use Ishmael\McpServer\Tools\MakeControllerTool;
-use Ishmael\McpServer\Tools\MakeServiceTool;
-use Ishmael\McpServer\Tools\MakeMigrationTool;
-use Ishmael\McpServer\Tools\MakeResourceTool;
-use Ishmael\McpServer\Tools\MakeViewTool;
-use Ishmael\McpServer\Tools\EnvValidateTool;
-use Ishmael\McpServer\Tools\EnvDriftTool;
-use Ishmael\McpServer\Tools\ProjectSnapshotTool;
-use Ishmael\McpServer\Tools\SetupRunConfigsTool;
-use Ishmael\McpServer\Tools\FeaturePackInstallTool;
-use Ishmael\McpServer\Tools\FeaturePackRegistryTool;
-use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
-use Ishmael\McpServer\Tools\RoutesListTool;
-use Ishmael\McpServer\Tools\ModuleDependencyTool;
-use Ishmael\McpServer\Tools\ModulesAnalyzeTool;
-use Ishmael\McpServer\Tools\MigrateAnalyzeTool;
-use Ishmael\McpServer\Tools\FindUsagesTool;
-use Ishmael\McpServer\Tools\DocsSyncTool;
-use Ishmael\McpServer\Tools\McpModeTool;
-use Ishmael\McpServer\Prompts\BestPracticesPrompt;
-use Ishmael\McpServer\Prompts\SetupProjectPrompt;
-use Ishmael\McpServer\Prompts\PlanFeaturePrompt;
-use Ishmael\McpServer\Prompts\TroubleshootPrompt;
-use Ishmael\McpServer\Prompts\DatabaseDesignPrompt;
-use Ishmael\McpServer\Prompts\IntentRouterPrompt;
-use Ishmael\McpServer\Prompts\Roles\AnalystPrompt;
-use Ishmael\McpServer\Prompts\Roles\ArchitectPrompt;
-use Ishmael\McpServer\Prompts\Roles\DeveloperPrompt;
-use Ishmael\McpServer\Prompts\Roles\ReviewerPrompt;
-use Ishmael\McpServer\Project\ProjectContext;
-use Ishmael\McpServer\Support\IshToolDiscoverer;
-use Ishmael\McpServer\Support\IntentMapper;
-use Ishmael\McpServer\Support\DatabaseConnectionFactory;
-use Ishmael\McpServer\Server\ProjectStateManager;
+    $cwd = getcwd();
+    $autoloadPaths = [
+        // Standalone / dev
+            __DIR__ . '/../vendor/autoload.php',
+        // Consumer app root
+            $cwd ? ($cwd . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php') : null,
+        // Nested layouts
+            __DIR__ . '/../../../../../autoload.php',
+            __DIR__ . '/../../../../../../autoload.php',
+    ];
 
-$version = require __DIR__ . '/../version.php';
-$context = ProjectContext::discover(getenv('ISH_PROJECT_ROOT') ?: null);
-if ($context->getRoot() === null) {
-    fwrite(STDERR, "[ish-mcp] Warning: Ishmael project root not detected from CWD. Some tools may be limited.\n");
-}
+    $autoloadPaths = array_values(array_filter($autoloadPaths));
 
-$stateManager = new ProjectStateManager($context->getRoot());
-$transport = new StdioTransport();
-$router = new RequestRouter(null, null, null, null, $stateManager);
-$router->registerTool(new HealthVersionTool($version));
-$router->registerTool(new ProjectInfoTool($context));
-$router->registerTool(new FeaturePackListTool($context));
-$router->registerTool(new FeaturePackPackTool($context));
-$router->registerTool(new FeaturePackCreateTool($context));
-$router->registerTool(new TestTool($context));
-$router->registerTool(new LintTool($context));
-$router->registerTool(new LogTailTool($context));
-$router->registerTool(new ContainerDescribeTool($context));
-$router->registerTool(new CapabilitiesDescribeTool($context));
-$router->registerTool(new MigrateTool($context));
-$router->registerTool(new MakeModuleTool($context));
-$router->registerTool(new ModulesCheckTool($context));
-$router->registerTool(new MakeControllerTool($context));
-$router->registerTool(new MakeServiceTool($context));
-$router->registerTool(new MakeMigrationTool($context));
-$router->registerTool(new MakeResourceTool($context));
-$router->registerTool(new MakeViewTool($context));
-$router->registerTool(new EnvValidateTool($context));
-$router->registerTool(new EnvDriftTool($context));
-$router->registerTool(new ProjectSnapshotTool($context));
-$router->registerTool(new SetupRunConfigsTool($context));
-$router->registerTool(new FeaturePackInstallTool($context));
-$router->registerTool(new FeaturePackRegistryTool());
-$router->registerTool(new FeaturePackIntegrateTool($context));
-$router->registerTool(new RoutesListTool($context));
-$router->registerTool(new ModuleDependencyTool($context));
-$router->registerTool(new ModulesAnalyzeTool($context));
-$router->registerTool(new MigrateAnalyzeTool($context));
-$router->registerTool(new FindUsagesTool($context));
-$router->registerTool(new McpModeTool($stateManager));
-$router->registerTool(new DocsSyncTool($context));
+    $loaded = false;
+    foreach ($autoloadPaths as $path) {
+        if (is_file($path)) {
+            require $path;
+            $loaded = true;
+            break;
+        }
+    }
+    if (!$loaded) {
+        fwrite(STDERR, "[ish-mcp] Autoloader not found. Checked:\n  - " . implode("\n  - ", $autoloadPaths) . "\n" .
+                "Ensure you ran 'composer install' in the project root.\n");
+        exit(1);
+    }
 
-// Dynamic discovery of Ishmael CLI tools from metadata
-$discoverer = new IshToolDiscoverer($context);
-foreach ($discoverer->discover() as $dynamicTool) {
-    $router->registerTool($dynamicTool);
-}
+    use Ishmael\McpServer\Protocol\StdioTransport;
+    use Ishmael\McpServer\Providers\StaticPromptProvider;
+    use Ishmael\McpServer\Providers\StaticResourceProvider;
+    use Ishmael\McpServer\Providers\AggregateResourceProvider;
+    use Ishmael\McpServer\Providers\DocsResourceProvider;
+    use Ishmael\McpServer\Providers\TemplatesResourceProvider;
+    use Ishmael\McpServer\Providers\PackageDocsResourceProvider;
+    use Ishmael\McpServer\Providers\IshStubsResourceProvider;
+    use Ishmael\McpServer\Providers\IshManifestResourceProvider;
+    use Ishmael\McpServer\Providers\IshAiManifestoResourceProvider;
+    use Ishmael\McpServer\Providers\IshCliMetadataResourceProvider;
+    use Ishmael\McpServer\Providers\IshHealthResourceProvider;
+    use Ishmael\McpServer\Providers\AiContextResourceProvider;
+    use Ishmael\McpServer\Providers\IntentMapResourceProvider;
+    use Ishmael\McpServer\Providers\FrameworkMapResourceProvider;
+    use Ishmael\McpServer\Providers\FrameworkIntrospectionProvider;
+    use Ishmael\McpServer\Providers\DatabaseSchemaProvider;
+    use Ishmael\McpServer\Server\RequestRouter;
+    use Ishmael\McpServer\Server\Server;
+    use Ishmael\McpServer\Tools\HealthVersionTool;
+    use Ishmael\McpServer\Tools\ProjectInfoTool;
+    use Ishmael\McpServer\Tools\FeaturePackListTool;
+    use Ishmael\McpServer\Tools\FeaturePackPackTool;
+    use Ishmael\McpServer\Tools\FeaturePackCreateTool;
+    use Ishmael\McpServer\Tools\TestTool;
+    use Ishmael\McpServer\Tools\LintTool;
+    use Ishmael\McpServer\Tools\LogTailTool;
+    use Ishmael\McpServer\Tools\ContainerDescribeTool;
+    use Ishmael\McpServer\Tools\CapabilitiesDescribeTool;
+    use Ishmael\McpServer\Tools\MigrateTool;
+    use Ishmael\McpServer\Tools\MakeModuleTool;
+    use Ishmael\McpServer\Tools\ModulesCheckTool;
+    use Ishmael\McpServer\Tools\MakeControllerTool;
+    use Ishmael\McpServer\Tools\MakeServiceTool;
+    use Ishmael\McpServer\Tools\MakeMigrationTool;
+    use Ishmael\McpServer\Tools\MakeResourceTool;
+    use Ishmael\McpServer\Tools\MakeViewTool;
+    use Ishmael\McpServer\Tools\EnvValidateTool;
+    use Ishmael\McpServer\Tools\EnvDriftTool;
+    use Ishmael\McpServer\Tools\ProjectSnapshotTool;
+    use Ishmael\McpServer\Tools\SetupRunConfigsTool;
+    use Ishmael\McpServer\Tools\FeaturePackInstallTool;
+    use Ishmael\McpServer\Tools\FeaturePackRegistryTool;
+    use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
+    use Ishmael\McpServer\Tools\RoutesListTool;
+    use Ishmael\McpServer\Tools\ModuleDependencyTool;
+    use Ishmael\McpServer\Tools\ModulesAnalyzeTool;
+    use Ishmael\McpServer\Tools\MigrateAnalyzeTool;
+    use Ishmael\McpServer\Tools\FindUsagesTool;
+    use Ishmael\McpServer\Tools\DocsSyncTool;
+    use Ishmael\McpServer\Tools\McpModeTool;
+    use Ishmael\McpServer\Tools\McpStateTransitionTool;
+    use Ishmael\McpServer\Prompts\BestPracticesPrompt;
+    use Ishmael\McpServer\Prompts\SetupProjectPrompt;
+    use Ishmael\McpServer\Prompts\PlanFeaturePrompt;
+    use Ishmael\McpServer\Prompts\TroubleshootPrompt;
+    use Ishmael\McpServer\Prompts\DatabaseDesignPrompt;
+    use Ishmael\McpServer\Prompts\IntentRouterPrompt;
+    use Ishmael\McpServer\Prompts\Roles\AnalystPrompt;
+    use Ishmael\McpServer\Prompts\Roles\ArchitectPrompt;
+    use Ishmael\McpServer\Prompts\Roles\DeveloperPrompt;
+    use Ishmael\McpServer\Prompts\Roles\ReviewerPrompt;
+    use Ishmael\McpServer\Project\ProjectContext;
+    use Ishmael\McpServer\Support\IshToolDiscoverer;
+    use Ishmael\McpServer\Support\IntentMapper;
+    use Ishmael\McpServer\Support\DatabaseConnectionFactory;
+    use Ishmael\McpServer\Server\ProjectStateManager;
 
-$staticResources = new StaticResourceProvider([
-    ['id' => 'docs:feature-packs', 'description' => 'Ishmael Feature Packs overview'],
-    ['id' => 'docs:getting-started', 'description' => 'Getting started with Ishmael'],
-]);
+    $version = require __DIR__ . '/../version.php';
+    $context = ProjectContext::discover(getenv('ISH_PROJECT_ROOT') ?: null);
+    if ($context->getRoot() === null) {
+        fwrite(STDERR, "[ish-mcp] Warning: Ishmael project root not detected from CWD. Some tools may be limited.\n");
+    }
 
-$intentMapPath = __DIR__ . '/../resources/intent-map.json';
-$intentMapper = new IntentMapper($intentMapPath);
-$intentMapProvider = new IntentMapResourceProvider($intentMapPath);
+    $stateManager = new ProjectStateManager($context->getRoot());
+    $transport = new StdioTransport();
+    $router = new RequestRouter(null, null, null, null, $stateManager);
+    $router->registerTool(new HealthVersionTool($version));
+    $router->registerTool(new ProjectInfoTool($context));
+    $router->registerTool(new FeaturePackListTool($context));
+    $router->registerTool(new FeaturePackPackTool($context));
+    $router->registerTool(new FeaturePackCreateTool($context));
+    $router->registerTool(new TestTool($context));
+    $router->registerTool(new LintTool($context));
+    $router->registerTool(new LogTailTool($context));
+    $router->registerTool(new ContainerDescribeTool($context));
+    $router->registerTool(new CapabilitiesDescribeTool($context));
+    $router->registerTool(new MigrateTool($context));
+    $router->registerTool(new MakeModuleTool($context));
+    $router->registerTool(new ModulesCheckTool($context));
+    $router->registerTool(new MakeControllerTool($context));
+    $router->registerTool(new MakeServiceTool($context));
+    $router->registerTool(new MakeMigrationTool($context));
+    $router->registerTool(new MakeResourceTool($context));
+    $router->registerTool(new MakeViewTool($context));
+    $router->registerTool(new EnvValidateTool($context));
+    $router->registerTool(new EnvDriftTool($context));
+    $router->registerTool(new ProjectSnapshotTool($context));
+    $router->registerTool(new SetupRunConfigsTool($context));
+    $router->registerTool(new FeaturePackInstallTool($context));
+    $router->registerTool(new FeaturePackRegistryTool());
+    $router->registerTool(new FeaturePackIntegrateTool($context));
+    $router->registerTool(new RoutesListTool($context));
+    $router->registerTool(new ModuleDependencyTool($context));
+    $router->registerTool(new ModulesAnalyzeTool($context));
+    $router->registerTool(new MigrateAnalyzeTool($context));
+    $router->registerTool(new FindUsagesTool($context));
+    $router->registerTool(new McpModeTool($stateManager));
+    $router->registerTool(new McpStateTransitionTool($stateManager));
+    $router->registerTool(new DocsSyncTool($context));
 
-$frameworkMapPath = __DIR__ . '/../Docs/Core/reference/framework-map.md';
-$frameworkMapProvider = new FrameworkMapResourceProvider($frameworkMapPath);
+    // Dynamic discovery of Ishmael CLI tools from metadata
+    $discoverer = new IshToolDiscoverer($context);
+    foreach ($discoverer->discover() as $dynamicTool) {
+        $router->registerTool($dynamicTool);
+    }
 
-$introspectionProvider = new FrameworkIntrospectionProvider($context);
-$dbConnectionFactory = new DatabaseConnectionFactory($context);
-$dbSchemaProvider = new DatabaseSchemaProvider($dbConnectionFactory);
-
-if ($context->getRoot() !== null && $context->getSandbox() !== null) {
-    $sandbox = $context->getSandbox();
-    $root = $context->getRoot();
-    $docsProvider = new DocsResourceProvider($sandbox, [
-        $root . DIRECTORY_SEPARATOR . 'Docs',
-        $root . DIRECTORY_SEPARATOR . 'Modules',
+    $staticResources = new StaticResourceProvider([
+            ['id' => 'docs:feature-packs', 'description' => 'Ishmael Feature Packs overview'],
+            ['id' => 'docs:getting-started', 'description' => 'Getting started with Ishmael'],
     ]);
-    $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
-    $ishStubs = new IshStubsResourceProvider($sandbox, dirname($context->getIshBinary(), 2), $context);
-    $ishManifest = new IshManifestResourceProvider($context);
-    $ishAiManifesto = new IshAiManifestoResourceProvider(__DIR__ . '/../resources/Docs/ai-manifesto.md');
-    $cliMetadata = new IshCliMetadataResourceProvider($context);
-    $projectHealth = new IshHealthResourceProvider($context);
-    $aiContext = new AiContextResourceProvider($context);
 
-    $resources = new AggregateResourceProvider([
-        $staticResources,
-        $intentMapProvider,
-        $frameworkMapProvider,
-        $docsProvider,
-        $templatesProvider,
-        $ishStubs,
-        $ishManifest,
-        $ishAiManifesto,
-        $cliMetadata,
-        $projectHealth,
-        $aiContext,
-        $introspectionProvider,
-        $dbSchemaProvider
-    ]);
-} else {
-    $resources = new AggregateResourceProvider([$staticResources, $intentMapProvider, $frameworkMapProvider, $introspectionProvider, $dbSchemaProvider]);
-}
-$bestPractices = new BestPracticesPrompt();
-$setupProject = new SetupProjectPrompt();
-$planFeature = new PlanFeaturePrompt();
-$troubleshoot = new TroubleshootPrompt();
-$databaseDesign = new DatabaseDesignPrompt();
-$intentRouter = new IntentRouterPrompt($intentMapper);
-$analystRole = new AnalystPrompt();
-$architectRole = new ArchitectPrompt();
-$developerRole = new DeveloperPrompt();
-$reviewerRole = new ReviewerPrompt();
+    $intentMapPath = __DIR__ . '/../resources/intent-map.json';
+    $intentMapper = new IntentMapper($intentMapPath);
+    $intentMapProvider = new IntentMapResourceProvider($intentMapPath);
 
-$prompts = new StaticPromptProvider([
-    ['id' => $bestPractices->getName(), 'description' => $bestPractices->getDescription()],
-    ['id' => $setupProject->getName(), 'description' => $setupProject->getDescription()],
-    ['id' => $planFeature->getName(), 'description' => $planFeature->getDescription()],
-    ['id' => $troubleshoot->getName(), 'description' => $troubleshoot->getDescription()],
-    ['id' => $databaseDesign->getName(), 'description' => $databaseDesign->getDescription()],
-    ['id' => $intentRouter->getName(), 'description' => $intentRouter->getDescription()],
-    ['id' => $analystRole->getName(), 'description' => $analystRole->getDescription()],
-    ['id' => $architectRole->getName(), 'description' => $architectRole->getDescription()],
-    ['id' => $developerRole->getName(), 'description' => $developerRole->getDescription()],
-    ['id' => $reviewerRole->getName(), 'description' => $reviewerRole->getDescription()],
-    ['id' => 'scaffold:controller', 'description' => 'Guide to scaffold a controller (dry-run)'],
-    ['id' => 'prompt:generate-feature-pack', 'description' => 'Explain how to plan and author a new Feature Pack'],
-    ['id' => 'prompt:integrate-feature-pack', 'description' => 'Explain integration steps for Feature Packs and how to apply them safely'],
-], [$bestPractices, $setupProject, $planFeature, $troubleshoot, $databaseDesign, $intentRouter, $analystRole, $architectRole, $developerRole, $reviewerRole]);
+    $frameworkMapPath = __DIR__ . '/../Docs/Core/reference/framework-map.md';
+    $frameworkMapProvider = new FrameworkMapResourceProvider($frameworkMapPath);
 
-$server = new Server($router, $transport, $resources, $prompts, null, null, null, $stateManager);
-$server->run();
+    $introspectionProvider = new FrameworkIntrospectionProvider($context);
+    $dbConnectionFactory = new DatabaseConnectionFactory($context);
+    $dbSchemaProvider = new DatabaseSchemaProvider($dbConnectionFactory);
+
+    if ($context->getRoot() !== null && $context->getSandbox() !== null) {
+        $sandbox = $context->getSandbox();
+        $root = $context->getRoot();
+        $docsProvider = new DocsResourceProvider($sandbox, [
+                $root . DIRECTORY_SEPARATOR . 'Docs',
+                $root . DIRECTORY_SEPARATOR . 'Modules',
+        ]);
+        $templatesProvider = new TemplatesResourceProvider($sandbox, $root . DIRECTORY_SEPARATOR . 'Templates');
+        $ishStubs = new IshStubsResourceProvider($sandbox, dirname($context->getIshBinary(), 2), $context);
+        $ishManifest = new IshManifestResourceProvider($context);
+        $ishAiManifesto = new IshAiManifestoResourceProvider(__DIR__ . '/../resources/Docs/ai-manifesto.md');
+        $cliMetadata = new IshCliMetadataResourceProvider($context);
+        $projectHealth = new IshHealthResourceProvider($context);
+        $aiContext = new AiContextResourceProvider($context);
+
+        $resources = new AggregateResourceProvider([
+                $staticResources,
+                $intentMapProvider,
+                $frameworkMapProvider,
+                $docsProvider,
+                $templatesProvider,
+                $ishStubs,
+                $ishManifest,
+                $ishAiManifesto,
+                $cliMetadata,
+                $projectHealth,
+                $aiContext,
+                $introspectionProvider,
+                $dbSchemaProvider
+        ]);
+    } else {
+        $resources = new AggregateResourceProvider([$staticResources, $intentMapProvider, $frameworkMapProvider, $introspectionProvider, $dbSchemaProvider]);
+    }
+    $bestPractices = new BestPracticesPrompt();
+    $setupProject = new SetupProjectPrompt();
+    $planFeature = new PlanFeaturePrompt();
+    $troubleshoot = new TroubleshootPrompt();
+    $databaseDesign = new DatabaseDesignPrompt();
+    $intentRouter = new IntentRouterPrompt($intentMapper);
+    $analystRole = new AnalystPrompt();
+    $architectRole = new ArchitectPrompt();
+    $developerRole = new DeveloperPrompt();
+    $reviewerRole = new ReviewerPrompt();
+
+    $prompts = new StaticPromptProvider([
+            ['id' => $bestPractices->getName(), 'description' => $bestPractices->getDescription()],
+            ['id' => $setupProject->getName(), 'description' => $setupProject->getDescription()],
+            ['id' => $planFeature->getName(), 'description' => $planFeature->getDescription()],
+            ['id' => $troubleshoot->getName(), 'description' => $troubleshoot->getDescription()],
+            ['id' => $databaseDesign->getName(), 'description' => $databaseDesign->getDescription()],
+            ['id' => $intentRouter->getName(), 'description' => $intentRouter->getDescription()],
+            ['id' => $analystRole->getName(), 'description' => $analystRole->getDescription()],
+            ['id' => $architectRole->getName(), 'description' => $architectRole->getDescription()],
+            ['id' => $developerRole->getName(), 'description' => $developerRole->getDescription()],
+            ['id' => $reviewerRole->getName(), 'description' => $reviewerRole->getDescription()],
+            ['id' => 'scaffold:controller', 'description' => 'Guide to scaffold a controller (dry-run)'],
+            ['id' => 'prompt:generate-feature-pack', 'description' => 'Explain how to plan and author a new Feature Pack'],
+            ['id' => 'prompt:integrate-feature-pack', 'description' => 'Explain integration steps for Feature Packs and how to apply them safely'],
+    ], [$bestPractices, $setupProject, $planFeature, $troubleshoot, $databaseDesign, $intentRouter, $analystRole, $architectRole, $developerRole, $reviewerRole]);
+
+    $server = new Server($router, $transport, $resources, $prompts, null, null, null, $stateManager);
+    $server->run();
