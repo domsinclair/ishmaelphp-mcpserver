@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.35](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.34...v0.7.35) (2026-02-10)
+
+
+### Bug Fixes
+
+* added Roles to the mcp server ([908ef67](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/908ef67b6bba85e28b7f3c7a9f84b860a75100ad))
+
 ## [0.7.34](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.33...v0.7.34) (2026-02-02)
 
 
