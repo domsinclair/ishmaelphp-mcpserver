@@ -15,6 +15,7 @@
     final class Server
     {
         private RequestRouter $router;
+        private ProjectStateManager $stateManager;
 
         private StdioTransport $transport;
 
@@ -35,7 +36,8 @@
             PromptProvider $prompts,
             ?Settings $settings = null,
             ?Telemetry $telemetry = null,
-            ?CancellationRegistry $cancellations = null
+            ?CancellationRegistry $cancellations = null,
+            ?ProjectStateManager $stateManager = null
         ) {
             $this->router = $router;
             $this->transport = $transport;
@@ -44,6 +46,7 @@
             $this->settings = $settings ?? new Settings();
             $this->telemetry = $telemetry ?? new Telemetry($this->settings);
             $this->cancellations = $cancellations ?? new CancellationRegistry();
+            $this->stateManager = $stateManager ?? new ProjectStateManager();
         }
 
         /**
@@ -107,6 +110,13 @@
                     case 'prompts/get':
                         $name = (string)($params['name'] ?? '');
                         $args = is_array($params['arguments'] ?? null) ? $params['arguments'] : [];
+
+                        // Phase 2: State-gated prompts
+                        if (!$this->isPromptAllowedForState($name)) {
+                            $response = ['error' => [ 'code' => 40301, 'message' => "Prompt '{$name}' is not allowed in state " . $this->stateManager->getState() ]];
+                            break;
+                        }
+
                         $prompt = $this->prompts->getPrompt($name, $args);
                         if ($prompt !== null) {
                             $response = [
@@ -169,5 +179,34 @@
                 }
                 $this->cancellations->complete($id);
             }
+        }
+        private function isPromptAllowedForState(string $name): bool
+        {
+            // Quick mode: allow Analyst and Developer prompts without strict gating
+            $mode = $this->stateManager->getMode();
+            if ($mode === ProjectStateManager::MODE_QUICK) {
+                return in_array($name, ['role:analyst', 'role:developer'], true) || strpos($name, 'role:') !== 0;
+            }
+
+            $state = $this->stateManager->getState();
+            // In Standard mode, gate role prompts by orchestration state
+            $map = [
+                ProjectStateManager::INIT => ['role:analyst'],
+                ProjectStateManager::ANALYSIS_COMPLETE => ['role:architect'],
+                ProjectStateManager::ARCHITECTURE_COMPLETE => ['role:developer'],
+                ProjectStateManager::IMPLEMENTATION_IN_PROGRESS => ['role:developer'],
+                ProjectStateManager::IMPLEMENTATION_COMPLETE => ['role:reviewer'],
+                ProjectStateManager::REVIEW_COMPLETE => ['role:reviewer'],
+                ProjectStateManager::ITERATION_REQUIRED => ['role:developer', 'role:architect'],
+                ProjectStateManager::ACCEPTED => ['role:analyst'],
+            ];
+
+            // Non-role prompts are not gated here
+            if (strpos($name, 'role:') !== 0) {
+                return true;
+            }
+
+            $allowed = $map[$state] ?? [];
+            return in_array($name, $allowed, true);
         }
     }

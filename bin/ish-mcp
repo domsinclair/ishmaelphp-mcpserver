@@ -88,26 +88,33 @@ use Ishmael\McpServer\Tools\ModulesAnalyzeTool;
 use Ishmael\McpServer\Tools\MigrateAnalyzeTool;
 use Ishmael\McpServer\Tools\FindUsagesTool;
 use Ishmael\McpServer\Tools\DocsSyncTool;
+use Ishmael\McpServer\Tools\McpModeTool;
 use Ishmael\McpServer\Prompts\BestPracticesPrompt;
 use Ishmael\McpServer\Prompts\SetupProjectPrompt;
 use Ishmael\McpServer\Prompts\PlanFeaturePrompt;
 use Ishmael\McpServer\Prompts\TroubleshootPrompt;
 use Ishmael\McpServer\Prompts\DatabaseDesignPrompt;
 use Ishmael\McpServer\Prompts\IntentRouterPrompt;
+use Ishmael\McpServer\Prompts\Roles\AnalystPrompt;
+use Ishmael\McpServer\Prompts\Roles\ArchitectPrompt;
+use Ishmael\McpServer\Prompts\Roles\DeveloperPrompt;
+use Ishmael\McpServer\Prompts\Roles\ReviewerPrompt;
 use Ishmael\McpServer\Project\ProjectContext;
 use Ishmael\McpServer\Support\IshToolDiscoverer;
 use Ishmael\McpServer\Support\IntentMapper;
 use Ishmael\McpServer\Support\DatabaseConnectionFactory;
+use Ishmael\McpServer\Server\ProjectStateManager;
 
 $version = require __DIR__ . '/../version.php';
-$transport = new StdioTransport();
-$router = new RequestRouter();
-$router->registerTool(new HealthVersionTool($version));
-
 $context = ProjectContext::discover(getenv('ISH_PROJECT_ROOT') ?: null);
 if ($context->getRoot() === null) {
     fwrite(STDERR, "[ish-mcp] Warning: Ishmael project root not detected from CWD. Some tools may be limited.\n");
 }
+
+$stateManager = new ProjectStateManager($context->getRoot());
+$transport = new StdioTransport();
+$router = new RequestRouter(null, null, null, null, $stateManager);
+$router->registerTool(new HealthVersionTool($version));
 $router->registerTool(new ProjectInfoTool($context));
 $router->registerTool(new FeaturePackListTool($context));
 $router->registerTool(new FeaturePackPackTool($context));
@@ -137,6 +144,7 @@ $router->registerTool(new ModuleDependencyTool($context));
 $router->registerTool(new ModulesAnalyzeTool($context));
 $router->registerTool(new MigrateAnalyzeTool($context));
 $router->registerTool(new FindUsagesTool($context));
+$router->registerTool(new McpModeTool($stateManager));
 $router->registerTool(new DocsSyncTool($context));
 
 // Dynamic discovery of Ishmael CLI tools from metadata
@@ -200,6 +208,10 @@ $planFeature = new PlanFeaturePrompt();
 $troubleshoot = new TroubleshootPrompt();
 $databaseDesign = new DatabaseDesignPrompt();
 $intentRouter = new IntentRouterPrompt($intentMapper);
+$analystRole = new AnalystPrompt();
+$architectRole = new ArchitectPrompt();
+$developerRole = new DeveloperPrompt();
+$reviewerRole = new ReviewerPrompt();
 
 $prompts = new StaticPromptProvider([
     ['id' => $bestPractices->getName(), 'description' => $bestPractices->getDescription()],
@@ -208,10 +220,14 @@ $prompts = new StaticPromptProvider([
     ['id' => $troubleshoot->getName(), 'description' => $troubleshoot->getDescription()],
     ['id' => $databaseDesign->getName(), 'description' => $databaseDesign->getDescription()],
     ['id' => $intentRouter->getName(), 'description' => $intentRouter->getDescription()],
+    ['id' => $analystRole->getName(), 'description' => $analystRole->getDescription()],
+    ['id' => $architectRole->getName(), 'description' => $architectRole->getDescription()],
+    ['id' => $developerRole->getName(), 'description' => $developerRole->getDescription()],
+    ['id' => $reviewerRole->getName(), 'description' => $reviewerRole->getDescription()],
     ['id' => 'scaffold:controller', 'description' => 'Guide to scaffold a controller (dry-run)'],
     ['id' => 'prompt:generate-feature-pack', 'description' => 'Explain how to plan and author a new Feature Pack'],
     ['id' => 'prompt:integrate-feature-pack', 'description' => 'Explain integration steps for Feature Packs and how to apply them safely'],
-], [$bestPractices, $setupProject, $planFeature, $troubleshoot, $databaseDesign, $intentRouter]);
+], [$bestPractices, $setupProject, $planFeature, $troubleshoot, $databaseDesign, $intentRouter, $analystRole, $architectRole, $developerRole, $reviewerRole]);
 
-$server = new Server($router, $transport, $resources, $prompts);
+$server = new Server($router, $transport, $resources, $prompts, null, null, null, $stateManager);
 $server->run();

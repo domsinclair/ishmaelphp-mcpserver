@@ -17,6 +17,8 @@
 
         private array $tools = [];
 
+        private ?ProjectStateManager $stateManager = null;
+
         private Settings $settings;
 
         private RateLimiter $rateLimiter;
@@ -27,7 +29,7 @@
 
 
 
-        public function __construct(?Settings $settings = null, ?RateLimiter $rateLimiter = null, ?ResultCache $cache = null, ?Telemetry $telemetry = null)
+        public function __construct(?Settings $settings = null, ?RateLimiter $rateLimiter = null, ?ResultCache $cache = null, ?Telemetry $telemetry = null, ?ProjectStateManager $stateManager = null)
         {
 
             $this->settings = $settings ?? new Settings();
@@ -37,6 +39,7 @@
             $this->cache = $cache ?? new ResultCache($this->settings);
 
             $this->telemetry = $telemetry ?? new Telemetry($this->settings);
+            $this->stateManager = $stateManager;
         }
 
 
@@ -119,6 +122,27 @@
             }
 
             $tool = $this->tools[$method];
+
+            // Phase 2: Optional state gating for role-specific tools
+            if ($this->stateManager !== null && method_exists($tool, 'allowedStates')) {
+                try {
+                    /** @var list<string> $allowed */
+                    $allowed = $tool->allowedStates();
+                } catch (\Throwable $e) {
+                    $allowed = [];
+                }
+                if ($allowed !== []) {
+                    $current = $this->stateManager->getState();
+                    if (!in_array($current, $allowed, true)) {
+                        return [
+                            'error' => [
+                                'code' => 40302,
+                                'message' => 'Tool not allowed in current state: ' . $current,
+                            ],
+                        ];
+                    }
+                }
+            }
 
 
 
