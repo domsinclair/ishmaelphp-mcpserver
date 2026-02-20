@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.37](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.36...v0.7.37) (2026-02-20)
+
+
+### Bug Fixes
+
+* ammended feature pack publishing ([c17e468](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/c17e4685e09cf47fc7475ca8549e3bc386f05782))
+
 ## [0.7.36](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.35...v0.7.36) (2026-02-10)
 
 
