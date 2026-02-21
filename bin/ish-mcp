@@ -82,6 +82,8 @@
     use Ishmael\McpServer\Tools\FeaturePackInstallTool;
     use Ishmael\McpServer\Tools\FeaturePackRegistryTool;
     use Ishmael\McpServer\Tools\FeaturePackPublishTool;
+    use Ishmael\McpServer\Tools\VendorRegisterTool;
+    use Ishmael\McpServer\Tools\VendorAuthenticateTool;
     use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
     use Ishmael\McpServer\Tools\RoutesListTool;
     use Ishmael\McpServer\Tools\ModuleDependencyTool;
@@ -141,6 +143,8 @@
     $router->registerTool(new FeaturePackInstallTool($context));
     $router->registerTool(new FeaturePackRegistryTool());
     $router->registerTool(new FeaturePackPublishTool($context));
+    $router->registerTool(new VendorRegisterTool($context));
+    $router->registerTool(new VendorAuthenticateTool($context));
     $router->registerTool(new FeaturePackIntegrateTool($context));
     $router->registerTool(new RoutesListTool($context));
     $router->registerTool(new ModuleDependencyTool($context));
