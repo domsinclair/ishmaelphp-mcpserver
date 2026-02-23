@@ -6,6 +6,7 @@ namespace Ishmael\McpServer\Tools;
 use Ishmael\McpServer\Contracts\Tool;
 use Ishmael\McpServer\Project\ProjectContext;
 use Ishmael\McpServer\Support\IshCliBridge;
+use Ishmael\McpServer\Support\RegistryToolHelper;
 use Exception;
 
 /**
@@ -17,7 +18,7 @@ final class FeaturePackPublishTool implements Tool
     private ProjectContext $context;
     private IshCliBridge $cli;
 
-    private const DEFAULT_REGISTRY_URL = "http://vtl-ishmael-registry.test";
+    private const DEFAULT_REGISTRY_URL = "https://vtl-ishmael-registry.test";
 
     public function __construct(ProjectContext $context)
     {
@@ -76,20 +77,25 @@ final class FeaturePackPublishTool implements Tool
     {
         $module = (string)$input["module"];
         $token = isset($input["token"]) ? (string)$input["token"] : null;
-        $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : $this->getRegistryBaseUrl();
+        $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : RegistryToolHelper::getRegistryBaseUrl($this->context);
+        
+        $config = RegistryToolHelper::getConfig($this->context);
+        $registerUrl = isset($config['registry_register_url']) ? (string)$config['registry_register_url'] : rtrim($registryUrl, '/') . "/auth/register";
+        $authUrl = isset($config['registry_auth_url']) ? (string)$config['registry_auth_url'] : rtrim($registryUrl, '/') . "/auth/publish";
+        $uploadUrl = isset($config['registry_upload_url']) ? (string)$config['registry_upload_url'] : rtrim($registryUrl, '/') . "/api/publish/upload";
 
         if (!$token) {
-            $authUrl = $registryUrl . "/auth/publish?module=" . urlencode($module);
+            $authFlowUrl = $authUrl . "?module=" . urlencode($module);
             
             // Try to open the browser automatically on Windows
             if (PHP_OS_FAMILY === "Windows") {
-                @shell_exec("start " . escapeshellarg($authUrl));
+                @shell_exec("start " . escapeshellarg($authFlowUrl));
             }
 
             return [
                 "success" => true,
                 "message" => "Authentication required. Please complete the handshake in your browser.",
-                "authUrl" => $authUrl,
+                "authUrl" => $authFlowUrl,
                 "requiresAuth" => true
             ];
         }
@@ -123,35 +129,12 @@ final class FeaturePackPublishTool implements Tool
         }
 
         // 3. Upload to Registry
-        return $this->uploadToRegistry($registryUrl, $zipPath, $token);
+        return $this->uploadToRegistry($uploadUrl, $zipPath, $token);
     }
 
-    private function getRegistryBaseUrl(): string
-    {
-        // Try to get from config similar to FeaturePackRegistryTool
-        if ($this->context->getRoot() !== null) {
-            $configPath = $this->context->getRoot() . DIRECTORY_SEPARATOR . "config" . DIRECTORY_SEPARATOR . "app.php";
-            if (is_file($configPath)) {
-                // Mock functions if not defined (as done in RegistryTool)
-                if (!function_exists("env")) {
-                    eval("function env(\$key, \$default = null) { return \$_ENV[\$key] ?? \$_SERVER[\$key] ?? \$default; }");
-                }
-                if (!function_exists("base_path")) {
-                    eval("function base_path(\$path = \"\") { return \$path; }");
-                }
 
-                $config = @require $configPath;
-                if (is_array($config) && isset($config["registry_url"])) {
-                    return rtrim(dirname((string)$config["registry_url"]), "/");
-                }
-            }
-        }
-        return self::DEFAULT_REGISTRY_URL;
-    }
-
-    private function uploadToRegistry(string $baseUrl, string $zipPath, string $token): array
+    private function uploadToRegistry(string $uploadUrl, string $zipPath, string $token): array
     {
-        $uploadUrl = $baseUrl . "/api/publish/upload";
         
         // Use PHP CURL for multipart upload
         if (!function_exists("curl_init")) {
@@ -199,10 +182,21 @@ final class FeaturePackPublishTool implements Tool
             ];
         }
 
+        $message = "Registry rejected upload (HTTP $httpCode)";
+        $error = $data["error"] ?? (string)$response;
+
+        if ($httpCode === 403) {
+            $message = "Hardware Key required (Tier A).";
+            $error = "This vendor account requires a hardware key (YubiKey/TouchID) to publish, but none are registered or verified. Please use 'vendor:upgrade' to register a key.";
+        } elseif ($httpCode === 409) {
+            $message = "Duplicate version.";
+            $error = "This version of the feature pack has already been published to the registry.";
+        }
+
         return [
             "success" => false,
-            "message" => "Registry rejected upload (HTTP $httpCode)",
-            "error" => $data["error"] ?? (string)$response,
+            "message" => $message,
+            "error" => $error,
             "requiresAuth" => ($httpCode === 401)
         ];
     }

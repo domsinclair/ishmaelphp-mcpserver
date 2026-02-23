@@ -4,6 +4,7 @@ namespace Ishmael\McpServer\Tools;
 
 use Ishmael\McpServer\Contracts\Tool;
 use Ishmael\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Support\RegistryToolHelper;
 
 /**
  * Tool to register a new vendor on the Ishmael Registry.
@@ -11,7 +12,6 @@ use Ishmael\McpServer\Project\ProjectContext;
 class VendorRegisterTool implements Tool
 {
     private ProjectContext $context;
-    private const DEFAULT_REGISTRY_URL = "http://vtl-ishmael-registry.test";
 
     public function __construct(ProjectContext $context)
     {
@@ -51,6 +51,8 @@ class VendorRegisterTool implements Tool
                 "message" => ["type" => "string"],
                 "vendor" => ["type" => "string"],
                 "registered" => ["type" => "boolean"],
+                "tier" => ["type" => "string", "description" => "A (Hardware) or B (Community)"],
+                "token" => ["type" => "string", "description" => "Optional 10-minute Upload Token"],
                 "authUrl" => ["type" => "string"]
             ]
         ];
@@ -58,9 +60,23 @@ class VendorRegisterTool implements Tool
 
     public function execute(array $input): array
     {
-        $port = $input["port"] ?? 8080;
-        $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : $this->getRegistryBaseUrl();
-        $redirectUri = "http://localhost:$port/callback";
+        $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : RegistryToolHelper::getRegistryBaseUrl($this->context);
+        $port = $input["port"] ?? RegistryToolHelper::getListenerPort($this->context, 8080);
+
+        $config = RegistryToolHelper::getConfig($this->context);
+        $registerBaseUrl = isset($config['registry_register_url']) ? (string)$config['registry_register_url'] : rtrim($registryUrl, '/') . "/auth/register";
+
+        // Start listener with port discovery
+        $listener = RegistryToolHelper::startListener($port);
+        if (!$listener) {
+            return [
+                "success" => false,
+                "message" => "Could not start local listener on port $port or nearby ports.",
+            ];
+        }
+
+        [$server, $actualPort] = $listener;
+        $redirectUri = "http://localhost:$actualPort/callback";
 
         $params = [
             "redirect_uri" => $redirectUri
@@ -69,19 +85,7 @@ class VendorRegisterTool implements Tool
         if (!empty($input["email"])) $params["email"] = $input["email"];
         if (!empty($input["url"])) $params["url"] = $input["url"];
 
-        $authUrl = rtrim($registryUrl, '/') . "/auth/register?" . http_build_query($params);
-
-        // Start listener
-        $server = @stream_socket_server("tcp://127.0.0.1:$port", $errno, $errstr);
-        if (!$server) {
-            return [
-                "success" => false,
-                "message" => "Could not start local listener on port $port: $errstr ($errno). You may need to use a different port.",
-                "authUrl" => $authUrl
-            ];
-        }
-
-        stream_set_blocking($server, false);
+        $authUrl = $registerBaseUrl . (str_contains($registerBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
         // Try to open browser early
         if (PHP_OS_FAMILY === "Windows") {
@@ -89,17 +93,21 @@ class VendorRegisterTool implements Tool
         }
 
         $start = time();
-        $timeout = 60; // 60 seconds
+        $timeout = 120; // Increased timeout for two-step registration
         $resultData = null;
 
         while (time() - $start < $timeout) {
-            $client = @stream_socket_accept($server, 1); // 1 second timeout for accept
+            $client = @stream_socket_accept($server, 1);
             if ($client) {
                 $request = fread($client, 2048);
                 if ($request && preg_match("/GET \/callback\?(.*?) HTTP/i", $request, $matches)) {
                     parse_str($matches[1], $resultData);
 
-                    $responseBody = "<html><head><title>Ishmael Registry</title><style>body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f4; } .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }</style></head><body><div class='card'><h1>Registration Successful</h1><p>Vendor: " . htmlspecialchars($resultData['vendor'] ?? 'Unknown') . "</p><p>You can close this window now.</p></div></body></html>";
+                    $vendorName = htmlspecialchars($resultData['vendor'] ?? 'Unknown');
+                    $tier = $resultData['tier'] ?? 'B';
+                    $tierName = ($tier === 'A') ? 'Tier A (Hardware)' : 'Tier B (Community)';
+
+                    $responseBody = "<html><head><title>Ishmael Registry</title><style>body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f4; } .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1.1rem; } h1 { color: #2c3e50; }</style></head><body><div class='card'><h1>Registration Successful</h1><p>Vendor: <strong>$vendorName</strong></p><p>Trust Level: <strong>$tierName</strong></p><p>You can close this window and return to your IDE.</p></div></body></html>";
                     $response = "HTTP/1.1 200 OK\r\n";
                     $response .= "Content-Type: text/html\r\n";
                     $response .= "Content-Length: " . strlen($responseBody) . "\r\n";
@@ -112,16 +120,21 @@ class VendorRegisterTool implements Tool
                 }
                 fclose($client);
             }
-            usleep(100000); // 100ms
+            usleep(100000);
         }
         fclose($server);
 
         if ($resultData) {
+            $tier = $resultData["tier"] ?? "B";
+            $tierLabel = ($tier === "A") ? "Tier A (Hardware)" : "Tier B (Community)";
+            
             return [
                 "success" => true,
-                "message" => "Vendor registration successful.",
+                "message" => "Vendor registration successful as $tierLabel.",
                 "vendor" => $resultData["vendor"] ?? null,
-                "registered" => ($resultData["registered"] ?? "0") === "1"
+                "registered" => ($resultData["registered"] ?? "0") === "1",
+                "tier" => $tier,
+                "token" => $resultData["token"] ?? null
             ];
         }
 
@@ -132,22 +145,4 @@ class VendorRegisterTool implements Tool
         ];
     }
 
-    private function getRegistryBaseUrl(): string
-    {
-        if ($this->context->getRoot() !== null) {
-            $configPath = $this->context->getRoot() . DIRECTORY_SEPARATOR . "config" . DIRECTORY_SEPARATOR . "app.php";
-            if (is_file($configPath)) {
-                $content = file_get_contents($configPath);
-                if (preg_match("/'registry_url'\s*=>\s*['\"](.*?)['\"]/", $content, $matches)) {
-                    $url = $matches[1];
-                    // If it ends with /api/..., we want the base
-                    if (strpos($url, '/api') !== false) {
-                        return rtrim(substr($url, 0, strpos($url, '/api')), '/');
-                    }
-                    return rtrim($url, '/');
-                }
-            }
-        }
-        return self::DEFAULT_REGISTRY_URL;
-    }
 }

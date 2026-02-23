@@ -6,6 +6,7 @@ namespace Ishmael\McpServer\Tools;
 
 use Ishmael\McpServer\Contracts\Tool;
 use Ishmael\McpServer\Project\ProjectContext;
+use Ishmael\McpServer\Support\RegistryToolHelper;
 use SimpleXMLElement;
 use Exception;
 
@@ -17,7 +18,7 @@ final class FeaturePackRegistryTool implements Tool
     /**
      * The default registry URL.
      */
-    private const DEFAULT_REGISTRY_URL = 'http://vtl-ishmael-registry.test/registry/feature-packs.json';
+    private const DEFAULT_REGISTRY_URL = 'https://vtl-ishmael-registry.test/registry/feature-packs.json';
 
     private ?ProjectContext $context;
 
@@ -102,6 +103,7 @@ final class FeaturePackRegistryTool implements Tool
                                     'name' => ['type' => 'string'],
                                     'email' => ['type' => 'string'],
                                     'url' => ['type' => 'string'],
+                                    'trust_tier' => ['type' => 'string', 'description' => 'community or hardware'],
                                 ]
                             ],
                         ],
@@ -114,22 +116,9 @@ final class FeaturePackRegistryTool implements Tool
 
     private function getRegistryUrl(): string
     {
-        if ($this->context !== null && $this->context->getRoot() !== null) {
-            $configPath = $this->context->getRoot() . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'app.php';
-            if (is_file($configPath)) {
-                // We need to define these functions in the global namespace before requiring the config file.
-                if (!function_exists('env')) {
-                    eval('function env($key, $default = null) { return $_ENV[$key] ?? $_SERVER[$key] ?? $default; }');
-                }
-                if (!function_exists('base_path')) {
-                    eval('function base_path($path = "") { return $path; }');
-                }
-
-                $config = require $configPath;
-                if (is_array($config) && isset($config['registry_url'])) {
-                    return (string)$config['registry_url'];
-                }
-            }
+        $config = RegistryToolHelper::getConfig($this->context);
+        if (isset($config['registry_url'])) {
+            return (string)$config['registry_url'];
         }
 
         return self::DEFAULT_REGISTRY_URL;
@@ -139,6 +128,10 @@ final class FeaturePackRegistryTool implements Tool
     {
         try {
             $registryUrl = $this->getRegistryUrl();
+
+            // Check if we need the base for some API calls or keep it as is
+            // RegistryToolHelper::getRegistryBaseUrl($this->context); 
+            // but here we need the full JSON URL.
 
             // Append context parameters to the URL for scoring/filtering
             $params = [];
@@ -242,6 +235,7 @@ final class FeaturePackRegistryTool implements Tool
                 $vendorName = $vendor['name'] ?? '';
                 $vendorEmail = $vendor['email'] ?? '';
                 $vendorUrl = $vendor['url'] ?? '';
+                $trustTier = $vendor['trust_tier'] ?? 'community';
                 $version_num = $pack['version'] ?? '1.0.0';
                 $download = $pack['download'] ?? '';
                 $capabilities = $pack['capabilities'] ?? [];
@@ -258,6 +252,7 @@ final class FeaturePackRegistryTool implements Tool
                 $vendorName = $pack['vendor'] ?? '';
                 $vendorEmail = '';
                 $vendorUrl = '';
+                $trustTier = 'community';
                 $version_num = $pack['version'] ?? '1.0.0';
                 $download = $pack['download'] ?? '';
                 $capabilities = $pack['capabilities'] ?? [];
@@ -294,6 +289,7 @@ final class FeaturePackRegistryTool implements Tool
                     'name' => $vendorName,
                     'email' => $vendorEmail,
                     'url' => $vendorUrl,
+                    'trust_tier' => $trustTier,
                 ],
             ];
         }

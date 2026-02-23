@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Ishmael\McpServer\Tools;
 
@@ -7,9 +8,9 @@ use Ishmael\McpServer\Project\ProjectContext;
 use Ishmael\McpServer\Support\RegistryToolHelper;
 
 /**
- * Tool to perform authentication with Ishmael Registry.
+ * Tool to promote a vendor to Tier A (Hardware) by registering security keys.
  */
-class VendorAuthenticateTool implements Tool
+class VendorUpgradeTool implements Tool
 {
     private ProjectContext $context;
 
@@ -20,22 +21,21 @@ class VendorAuthenticateTool implements Tool
 
     public function getName(): string
     {
-        return "vendor:authenticate";
+        return "vendor:upgrade";
     }
 
     public function getDescription(): string
     {
-        return "Obtain an upload token from the Ishmael Registry (supports both Hardware and Community tiers).";
+        return "Promote a vendor to Tier A (Hardware) by registering security keys in the Ishmael Registry.";
     }
 
     public function getInputSchema(): array
     {
         return [
             "type" => "object",
+            "required" => ["vendor"],
             "properties" => [
-                "module" => ["type" => "string", "description" => "Module name for which to get a token"],
-                "vendor" => ["type" => "string", "description" => "Optional vendor name to prefill"],
-                "upgrade" => ["type" => "boolean", "description" => "If true, forces hardware key registration flow", "default" => false],
+                "vendor" => ["type" => "string", "description" => "The vendor name (slug) to upgrade"],
                 "port" => ["type" => "integer", "description" => "Local listener port", "default" => 8080],
                 "registryUrl" => ["type" => "string", "description" => "Registry base URL override"]
             ]
@@ -49,8 +49,7 @@ class VendorAuthenticateTool implements Tool
             "properties" => [
                 "success" => ["type" => "boolean"],
                 "message" => ["type" => "string"],
-                "token" => ["type" => "string"],
-                "tier" => ["type" => "string", "description" => "A (Hardware) or B (Community)"],
+                "tier" => ["type" => "string", "description" => "The new trust tier (A or B)"],
                 "authUrl" => ["type" => "string"]
             ]
         ];
@@ -58,11 +57,12 @@ class VendorAuthenticateTool implements Tool
 
     public function execute(array $input): array
     {
+        $vendor = (string)$input["vendor"];
         $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : RegistryToolHelper::getRegistryBaseUrl($this->context);
         $port = $input["port"] ?? RegistryToolHelper::getListenerPort($this->context, 8080);
         
         $config = RegistryToolHelper::getConfig($this->context);
-        $authBaseUrl = isset($config['registry_auth_url']) ? (string)$config['registry_auth_url'] : rtrim($registryUrl, '/') . "/auth/publish";
+        $upgradeBaseUrl = isset($config['registry_upgrade_url']) ? (string)$config['registry_upgrade_url'] : rtrim($registryUrl, '/') . "/auth/keys/setup";
 
         $listener = RegistryToolHelper::startListener($port);
         if (!$listener) {
@@ -76,21 +76,19 @@ class VendorAuthenticateTool implements Tool
         $redirectUri = "http://localhost:$actualPort/callback";
 
         $params = [
+            "upgrade" => "1",
+            "vendor" => $vendor,
             "redirect_uri" => $redirectUri
         ];
-        if (!empty($input["module"])) $params["module"] = $input["module"];
-        if (!empty($input["vendor"])) $params["vendor"] = $input["vendor"];
-        if (!empty($input["upgrade"])) $params["upgrade"] = "1";
 
-        $authUrl = $authBaseUrl . (str_contains($authBaseUrl, '?') ? '&' : '?') . http_build_query($params);
+        $authUrl = $upgradeBaseUrl . (str_contains($upgradeBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
-        // Try to open browser early
         if (PHP_OS_FAMILY === "Windows") {
             @shell_exec("start " . escapeshellarg($authUrl));
         }
 
         $start = time();
-        $timeout = 120; 
+        $timeout = 180; // Longer timeout for key registration
         $resultData = null;
 
         while (time() - $start < $timeout) {
@@ -103,7 +101,7 @@ class VendorAuthenticateTool implements Tool
                     $tier = $resultData['tier'] ?? 'B';
                     $tierName = ($tier === 'A') ? 'Tier A (Hardware)' : 'Tier B (Community)';
 
-                    $responseBody = "<html><head><title>Ishmael Registry</title><style>body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f4; } .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1.1rem; } h1 { color: #2c3e50; }</style></head><body><div class='card'><h1>Authentication Successful</h1><p>Token captured successfully.</p><p>Trust Level: <strong>$tierName</strong></p><p>You can close this window now.</p></div></body></html>";
+                    $responseBody = "<html><head><title>Ishmael Registry</title><style>body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f4; } .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1.1rem; } h1 { color: #2c3e50; }</style></head><body><div class='card'><h1>Security Setup Complete</h1><p>Trust Level: <strong>$tierName</strong></p><p>Your vendor account has been updated. You can close this window.</p></div></body></html>";
                     $response = "HTTP/1.1 200 OK\r\n";
                     $response .= "Content-Type: text/html\r\n";
                     $response .= "Content-Length: " . strlen($responseBody) . "\r\n";
@@ -120,20 +118,20 @@ class VendorAuthenticateTool implements Tool
         }
         fclose($server);
 
-        if ($resultData && isset($resultData['token'])) {
+        if ($resultData) {
+            $tier = $resultData['tier'] ?? 'B';
+            $success = ($tier === 'A');
             return [
                 "success" => true,
-                "message" => "Authentication successful.",
-                "token" => $resultData['token'],
-                "tier" => $resultData['tier'] ?? 'B'
+                "message" => $success ? "Vendor promoted to Tier A (Hardware)." : "Security setup completed, but remains Tier B.",
+                "tier" => $tier
             ];
         }
 
         return [
             "success" => false,
-            "message" => "Authentication timed out or failed. Ensure you completed the handshake in your browser.",
+            "message" => "Upgrade timed out or failed.",
             "authUrl" => $authUrl
         ];
     }
-
 }
