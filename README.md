@@ -40,6 +40,8 @@ The server uses **JSON-RPC 2.0** over **Standard Input/Output (Stdio)**.
 ### Environment Variables
 
 - `ISH_MCP_DEBUG`: Set to `1` to enable verbose error reporting.
+- `ISH_MCP_INSECURE_TLS`: Set to `1` to disable SSL certificate verification for registry requests (dev only).
+- `ISH_MCP_NO_BROWSER`: Set to `1` to prevent the server from automatically opening the browser for vendor registration/auth.
 - `MCP_RATE_LIMIT`: Configure request rate limiting (default: 100/min).
 - `MCP_REQUEST_TIMEOUT_MS`: Set maximum request duration (default: 30000ms).
 

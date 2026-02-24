@@ -55,8 +55,9 @@ final class FeaturePackListTool implements Tool
                 'project_type' => ['type' => 'string', 'description' => 'Optional project type for context-aware scoring.'],
                 'deployment' => ['type' => 'string', 'description' => 'Optional deployment environment.'],
                 'ui_required' => ['type' => 'boolean', 'description' => 'Whether a UI is required.'],
+                'insecure' => ['type' => 'boolean', 'description' => 'Whether to skip SSL certificate verification (dev only).'],
+                'registryUrl' => ['type' => 'string', 'description' => 'Optional registry URL override.'],
             ],
-
         ];
     }
 
@@ -147,6 +148,8 @@ final class FeaturePackListTool implements Tool
             'project_type' => $input['project_type'] ?? null,
             'deployment' => $input['deployment'] ?? null,
             'ui_required' => isset($input['ui_required']) ? (bool)$input['ui_required'] : null,
+            'insecure' => isset($input['insecure']) ? (bool)$input['insecure'] : null,
+            'registryUrl' => $input['registryUrl'] ?? null,
         ];
 
 

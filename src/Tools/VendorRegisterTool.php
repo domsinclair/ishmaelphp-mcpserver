@@ -37,7 +37,8 @@ class VendorRegisterTool implements Tool
                 "email" => ["type" => "string", "description" => "Developer email"],
                 "url" => ["type" => "string", "description" => "Developer website"],
                 "port" => ["type" => "integer", "description" => "Local listener port", "default" => 8080],
-                "registryUrl" => ["type" => "string", "description" => "Registry base URL override"]
+                "registryUrl" => ["type" => "string", "description" => "Registry base URL override"],
+                "noBrowser" => ["type" => "boolean", "description" => "If true, skips server-initiated browser launch.", "default" => false]
             ]
         ];
     }
@@ -87,9 +88,11 @@ class VendorRegisterTool implements Tool
 
         $authUrl = $registerBaseUrl . (str_contains($registerBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
+        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+
         // Try to open browser early
-        if (PHP_OS_FAMILY === "Windows") {
-            @shell_exec("start " . escapeshellarg($authUrl));
+        if (!$noBrowser && PHP_OS_FAMILY === "Windows") {
+            @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
         }
 
         $start = time();
@@ -134,7 +137,8 @@ class VendorRegisterTool implements Tool
                 "vendor" => $resultData["vendor"] ?? null,
                 "registered" => ($resultData["registered"] ?? "0") === "1",
                 "tier" => $tier,
-                "token" => $resultData["token"] ?? null
+                "token" => $resultData["token"] ?? null,
+                "authUrl" => $authUrl
             ];
         }
 

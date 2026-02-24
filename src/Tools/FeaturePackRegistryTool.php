@@ -63,6 +63,14 @@ final class FeaturePackRegistryTool implements Tool
                     'type' => 'boolean',
                     'description' => 'Whether a UI is required for the feature pack.'
                 ],
+                'insecure' => [
+                    'type' => 'boolean',
+                    'description' => 'Whether to skip SSL certificate verification (dev only).'
+                ],
+                'registryUrl' => [
+                    'type' => 'string',
+                    'description' => 'Optional registry URL override.'
+                ],
             ],
         ];
     }
@@ -114,11 +122,22 @@ final class FeaturePackRegistryTool implements Tool
         ];
     }
 
-    private function getRegistryUrl(): string
+    private function getRegistryUrl(?string $override = null): string
     {
+        if ($override !== null) {
+            return $override;
+        }
+
         $config = RegistryToolHelper::getConfig($this->context);
+        
+        // 1. Explicit full URL from config
         if (isset($config['registry_url'])) {
             return (string)$config['registry_url'];
+        }
+
+        // 2. Derive from base URL if available
+        if (isset($config['registry_base_url'])) {
+            return rtrim((string)$config['registry_base_url'], '/') . '/registry/feature-packs.json';
         }
 
         return self::DEFAULT_REGISTRY_URL;
@@ -127,7 +146,8 @@ final class FeaturePackRegistryTool implements Tool
     public function execute(array $input): array
     {
         try {
-            $registryUrl = $this->getRegistryUrl();
+            $registryUrl = $this->getRegistryUrl($input['registryUrl'] ?? null);
+            $insecure = (bool)($input['insecure'] ?? (getenv('ISH_MCP_INSECURE_TLS') === '1'));
 
             // Check if we need the base for some API calls or keep it as is
             // RegistryToolHelper::getRegistryBaseUrl($this->context); 
@@ -142,33 +162,63 @@ final class FeaturePackRegistryTool implements Tool
             if (isset($input['ui_required'])) $params['ui_required'] = $input['ui_required'] ? '1' : '0';
 
             // Filter out query/category from URL params if the target is a local file
-            $isLocalFile = (str_starts_with($registryUrl, '/') || str_contains($registryUrl, ':\\') || str_contains($registryUrl, ':/'));
+            $isLocalFile = (str_starts_with($registryUrl, '/') || preg_match('/^[a-zA-Z]:[\/\\\]/', $registryUrl)) 
+                && !preg_match('/^https?:\/\//i', $registryUrl);
             
             if (!empty($params) && !$isLocalFile) {
                 $separator = (str_contains($registryUrl, '?')) ? '&' : '?';
                 $registryUrl .= $separator . http_build_query($params);
             }
 
-            // Note: In a real-world scenario, we'd use a more robust HTTP client and caching.
-            // For now, simple file_get_contents with a timeout should suffice for demonstration.
-            $context = stream_context_create([
-                'http' => ['timeout' => 5]
-            ]);
-            
-            $content = @file_get_contents($registryUrl, false, $context);
+            if ($isLocalFile) {
+                $content = @file_get_contents($registryUrl);
+            } else {
+                // Using cURL for better reliability and SSL handling on Windows
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $registryUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Ishmael-MCP-Server/0.4');
+
+                if ($insecure) {
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+                }
+
+                $content = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlError = curl_error($ch);
+                curl_close($ch);
+
+                if ($content === false || $httpCode >= 400) {
+                    $errorMessage = 'Could not fetch registry from ' . $registryUrl;
+                    if ($curlError) {
+                        $errorMessage .= ': ' . $curlError;
+                    } elseif ($httpCode >= 400) {
+                        $errorMessage .= " (HTTP $httpCode)";
+                    }
+
+                    // Add DNS diagnostic info if it's a connection failure
+                    $host = parse_url($registryUrl, PHP_URL_HOST);
+                    if ($host) {
+                        $ip = gethostbyname($host);
+                        $errorMessage .= " (Host: $host, Resolved IP: $ip)";
+                    }
+
+                    return [
+                        'features' => [],
+                        'error' => $errorMessage
+                    ];
+                }
+            }
             
             if ($content === false) {
                 $error = error_get_last();
-                $errorMessage = 'Could not fetch registry from ' . $registryUrl;
+                $errorMessage = 'Could not read local registry file from ' . $registryUrl;
                 if ($error) {
                     $errorMessage .= ': ' . $error['message'];
-                }
-                
-                // Add DNS diagnostic info if it's a connection failure
-                $host = parse_url($registryUrl, PHP_URL_HOST);
-                if ($host) {
-                    $ip = gethostbyname($host);
-                    $errorMessage .= " (Host: $host, Resolved IP: $ip)";
                 }
 
                 return [

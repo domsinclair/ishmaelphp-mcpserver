@@ -37,7 +37,8 @@ class VendorAuthenticateTool implements Tool
                 "vendor" => ["type" => "string", "description" => "Optional vendor name to prefill"],
                 "upgrade" => ["type" => "boolean", "description" => "If true, forces hardware key registration flow", "default" => false],
                 "port" => ["type" => "integer", "description" => "Local listener port", "default" => 8080],
-                "registryUrl" => ["type" => "string", "description" => "Registry base URL override"]
+                "registryUrl" => ["type" => "string", "description" => "Registry base URL override"],
+                "noBrowser" => ["type" => "boolean", "description" => "If true, skips server-initiated browser launch.", "default" => false]
             ]
         ];
     }
@@ -84,9 +85,11 @@ class VendorAuthenticateTool implements Tool
 
         $authUrl = $authBaseUrl . (str_contains($authBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
+        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+
         // Try to open browser early
-        if (PHP_OS_FAMILY === "Windows") {
-            @shell_exec("start " . escapeshellarg($authUrl));
+        if (!$noBrowser && PHP_OS_FAMILY === "Windows") {
+            @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
         }
 
         $start = time();
@@ -125,7 +128,8 @@ class VendorAuthenticateTool implements Tool
                 "success" => true,
                 "message" => "Authentication successful.",
                 "token" => $resultData['token'],
-                "tier" => $resultData['tier'] ?? 'B'
+                "tier" => $resultData['tier'] ?? 'B',
+                "authUrl" => $authUrl
             ];
         }
 
