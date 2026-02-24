@@ -96,7 +96,7 @@ class VendorRegisterTool implements Tool
         }
 
         $start = time();
-        $timeout = 120; // Increased timeout for two-step registration
+        $timeout = 300; // Increased timeout for two-step registration
         $resultData = null;
 
         while (time() - $start < $timeout) {
@@ -111,6 +111,7 @@ class VendorRegisterTool implements Tool
                     $tierName = ($tier === 'A') ? 'Tier A (Hardware)' : 'Tier B (Community)';
 
                     $responseBody = "<html><head><title>Ishmael Registry</title><style>body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f4; } .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1.1rem; } h1 { color: #2c3e50; }</style></head><body><div class='card'><h1>Registration Successful</h1><p>Vendor: <strong>$vendorName</strong></p><p>Trust Level: <strong>$tierName</strong></p><p>You can close this window and return to your IDE.</p></div></body></html>";
+                    error_log("[VendorRegisterTool] Callback received for vendor: $vendorName");
                     $response = "HTTP/1.1 200 OK\r\n";
                     $response .= "Content-Type: text/html\r\n";
                     $response .= "Content-Length: " . strlen($responseBody) . "\r\n";
