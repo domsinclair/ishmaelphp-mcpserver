@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.40](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.39...v0.7.40) (2026-02-24)
+
+
+### Miscellaneous Chores
+
+* added more vendor registration improvements ([704245a](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/704245ab031ed83c78594fe9c3b66766f318c240))
+
 ## [0.7.39](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.38...v0.7.39) (2026-02-23)
 
 
