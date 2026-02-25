@@ -139,7 +139,25 @@
                 }
             }
 
+            $emits = [];
+            $listeners = [];
+            $modulePhp = $dir . DIRECTORY_SEPARATOR . 'module.php';
+            if (is_file($modulePhp)) {
+                try {
+                    // Avoid side effects if possible, but Ishmael manifests are usually pure arrays.
+                    // We use an anonymous function to isolate the scope.
+                    $manifest = (static function($path) {
+                        return include $path;
+                    })($modulePhp);
 
+                    if (is_array($manifest)) {
+                        $emits = $manifest['emits'] ?? [];
+                        $listeners = $manifest['listeners'] ?? [];
+                    }
+                } catch (\Throwable $e) {
+                    // Ignore manifest errors during scanning
+                }
+            }
 
             return [
 
@@ -166,6 +184,10 @@
                 'source' => 'local-template',
 
                 'path' => $dir,
+
+                'emits' => $emits,
+
+                'listeners' => $listeners,
 
             ];
         }

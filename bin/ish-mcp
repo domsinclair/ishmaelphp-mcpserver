@@ -94,6 +94,9 @@
     use Ishmael\McpServer\Tools\DocsSyncTool;
     use Ishmael\McpServer\Tools\McpModeTool;
     use Ishmael\McpServer\Tools\McpStateTransitionTool;
+    use Ishmael\McpServer\Tools\EventsListTool;
+    use Ishmael\McpServer\Tools\MakeEventTool;
+    use Ishmael\McpServer\Tools\MakeListenerTool;
     use Ishmael\McpServer\Prompts\BestPracticesPrompt;
     use Ishmael\McpServer\Prompts\SetupProjectPrompt;
     use Ishmael\McpServer\Prompts\PlanFeaturePrompt;
@@ -156,6 +159,9 @@
     $router->registerTool(new McpModeTool($stateManager));
     $router->registerTool(new McpStateTransitionTool($stateManager));
     $router->registerTool(new DocsSyncTool($context));
+    $router->registerTool(new EventsListTool($context));
+    $router->registerTool(new MakeEventTool($context));
+    $router->registerTool(new MakeListenerTool($context));
 
     // Dynamic discovery of Ishmael CLI tools from metadata
     $discoverer = new IshToolDiscoverer($context);

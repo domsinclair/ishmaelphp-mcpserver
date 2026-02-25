@@ -43,7 +43,7 @@ final class ProjectSnapshotTool implements Tool
     {
         return [
             'type' => 'object',
-            'required' => ['project', 'environment', 'logs'],
+            'required' => ['project', 'environment', 'logs', 'events'],
             'properties' => [
                 'project' => [
                     'type' => 'object',
@@ -73,6 +73,13 @@ final class ProjectSnapshotTool implements Tool
                         ]
                     ]
                 ],
+                'events' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'total_events' => ['type' => 'integer'],
+                        'total_listeners' => ['type' => 'integer'],
+                    ]
+                ],
             ],
         ];
     }
@@ -83,6 +90,24 @@ final class ProjectSnapshotTool implements Tool
             'project' => $this->getProjectInfo(),
             'environment' => $this->getEnvironmentInfo(),
             'logs' => $this->getRecentErrors(),
+            'events' => $this->getEventMetrics(),
+        ];
+    }
+
+    private function getEventMetrics(): array
+    {
+        $eventTool = new EventsListTool($this->context);
+        $result = $eventTool->execute([]);
+        
+        $totalEvents = count($result['events'] ?? []);
+        $totalListeners = 0;
+        foreach ($result['events'] ?? [] as $event) {
+            $totalListeners += count($event['listeners'] ?? []);
+        }
+
+        return [
+            'total_events' => $totalEvents,
+            'total_listeners' => $totalListeners,
         ];
     }
 
