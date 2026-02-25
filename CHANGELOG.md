@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.42](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.41...v0.7.42) (2026-02-25)
+
+
+### Miscellaneous Chores
+
+* added event bus integration ([b001c8d](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/b001c8d3eecd0a24118bca948319caa5faf6e531))
+
 ## [0.7.41](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.40...v0.7.41) (2026-02-24)
 
 
