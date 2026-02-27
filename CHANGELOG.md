@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.43](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.42...v0.7.43) (2026-02-27)
+
+
+### Bug Fixes
+
+* Improved project state manager ([a1fbb98](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/a1fbb984bd5c116fa7c3030a56d439de8820795c))
+
 ## [0.7.42](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.41...v0.7.42) (2026-02-25)
 
 
