@@ -68,12 +68,14 @@ final class ProjectStateManager
     /** Get current mode (quick|standard). */
     public function getMode(): string
     {
+        $this->load();
         return is_string($this->data['mode'] ?? null) ? (string)$this->data['mode'] : self::MODE_QUICK;
     }
 
     /** Set mode and persist. */
     public function setMode(string $mode): void
     {
+        $this->load();
         if (!in_array($mode, [self::MODE_QUICK, self::MODE_STANDARD], true)) {
             throw new \InvalidArgumentException('Invalid mode: ' . $mode);
         }
@@ -84,6 +86,7 @@ final class ProjectStateManager
     /** Get current orchestration state. */
     public function getState(): string
     {
+        $this->load();
         return is_string($this->data['state'] ?? null) ? (string)$this->data['state'] : self::INIT;
     }
 
@@ -92,6 +95,7 @@ final class ProjectStateManager
      */
     public function transition(string $to): bool
     {
+        $this->load();
         $from = $this->getState();
         $allowed = self::ALLOWED_TRANSITIONS[$from] ?? [];
         if (!in_array($to, $allowed, true)) {
@@ -124,6 +128,7 @@ final class ProjectStateManager
     /** List of stages considered locked (artifact immutability bookkeeping). */
     public function getLockedStages(): array
     {
+        $this->load();
         $locked = $this->data['locked'] ?? [];
         return is_array($locked) ? array_values(array_map('strval', $locked)) : [];
     }
@@ -154,13 +159,21 @@ final class ProjectStateManager
             $this->reset();
             return;
         }
+
+        // Avoid infinite recursion if reset() or save() are called
+        static $loading = false;
+        if ($loading) return;
+        $loading = true;
+
         $raw = @file_get_contents($this->stateFile);
         if ($raw === false) {
+            $loading = false;
             $this->reset();
             return;
         }
         $parsed = json_decode($raw, true);
         if (!is_array($parsed)) {
+            $loading = false;
             $this->reset();
             return;
         }
@@ -182,6 +195,7 @@ final class ProjectStateManager
             $this->data['version'] = 1;
         }
         $this->save(); // normalize on disk
+        $loading = false;
     }
 
     private function save(): void
