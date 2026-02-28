@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.44](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.43...v0.7.44) (2026-02-28)
+
+
+### Bug Fixes
+
+* improved event bus management ([3acb830](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/3acb8304a8929c67fbe3a23f40d619ade7e74d53))
+
 ## [0.7.43](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.42...v0.7.43) (2026-02-27)
 
 
