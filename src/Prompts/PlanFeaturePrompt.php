@@ -51,7 +51,7 @@ final class PlanFeaturePrompt implements Prompt
                         "3. **Define Routes**: Edit `Modules/<Name>/routes.php`.\n" .
                         "4. **Create Controller**: `ish:make:controller <Name> <ControllerName>` (Add `--api` if the module type is `api`).\n" .
                         "5. **Create Service**: `ish:make:service <Name> <ServiceName>` (for business logic).\n" .
-                        "6. **Define Events & Listeners**: If this feature interacts with other modules, use `ish:events:list` to find hooks. Scaffold new ones with `ish:make:event` and `ish:make:listener`.\n" .
+                        "6. **Define Events & Listeners**: If this feature interacts with other modules, use `ish:events:list` to find hooks. Check for **Core Framework Events** (source_type: core) that might already provide the necessary signals before creating new ones. Scaffold new events with `ish:make:event` and listeners with `ish:make:listener`.\n" .
                         "7. **Create Migration**: `ish:make:migration create_<table_name>_table` (if persistence is needed).\n\n" .
                         "### 4. Distinguishing Feature Packs\n" .
                         "- Feature Packs are standalone modules often distributed via Composer.\n" .

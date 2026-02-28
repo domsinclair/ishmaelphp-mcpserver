@@ -158,9 +158,12 @@ final class MakeListenerTool implements Tool
         $content = file_get_contents($path);
 
         if (str_contains($content, "'listeners' => [")) {
-            // Check if this specific event already has listeners
-            if (str_contains($content, "'$event' => [")) {
-                 return preg_replace("/'$event' => \[/", "'$event' => [\n            '$listenerFqcn',", $content, 1);
+            // Check if this specific event already has listeners (as literal string or ::class)
+            $eventEscaped = preg_quote($event, '/');
+            $pattern = "/(?:'{$eventEscaped}'|\\\\?{$eventEscaped}::class)\s*=>\s*\[/";
+            
+            if (preg_match($pattern, $content)) {
+                 return preg_replace($pattern, "$0\n            '$listenerFqcn',", $content, 1);
             } else {
                  return preg_replace("/'listeners' => \[/", "'listeners' => [\n        '$event' => [\n            '$listenerFqcn'\n        ],", $content, 1);
             }

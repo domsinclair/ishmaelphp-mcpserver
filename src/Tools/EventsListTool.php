@@ -66,6 +66,7 @@ final class EventsListTool implements Tool
                                 ]
                             ],
                             'emitted_by' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'source_type' => ['type' => 'string', 'description' => 'Where this event emanates from (core or module).'],
                         ]
                     ]
                 ],

@@ -77,6 +77,8 @@ final class ProjectSnapshotTool implements Tool
                     'type' => 'object',
                     'properties' => [
                         'total_events' => ['type' => 'integer'],
+                        'core_events' => ['type' => 'integer', 'description' => 'Number of framework-level core events.'],
+                        'module_events' => ['type' => 'integer', 'description' => 'Number of domain-specific module events.'],
                         'total_listeners' => ['type' => 'integer'],
                     ]
                 ],
@@ -99,14 +101,25 @@ final class ProjectSnapshotTool implements Tool
         $eventTool = new EventsListTool($this->context);
         $result = $eventTool->execute([]);
         
-        $totalEvents = count($result['events'] ?? []);
+        $events = $result['events'] ?? [];
+        $totalEvents = count($events);
+        $coreEvents = 0;
+        $moduleEvents = 0;
         $totalListeners = 0;
-        foreach ($result['events'] ?? [] as $event) {
+
+        foreach ($events as $event) {
+            if (($event['source_type'] ?? '') === 'core') {
+                $coreEvents++;
+            } else {
+                $moduleEvents++;
+            }
             $totalListeners += count($event['listeners'] ?? []);
         }
 
         return [
             'total_events' => $totalEvents,
+            'core_events' => $coreEvents,
+            'module_events' => $moduleEvents,
             'total_listeners' => $totalListeners,
         ];
     }
