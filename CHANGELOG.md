@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.45](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.44...v0.7.45) (2026-03-04)
+
+
+### Bug Fixes
+
+* Improved feature pack packaging ([a98397b](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/a98397bb02d6ee0376867e9a27c0457645512a5d))
+
 ## [0.7.44](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.43...v0.7.44) (2026-02-28)
 
 
