@@ -9,7 +9,7 @@ use Ishmael\McpServer\Project\ProjectContext;
 /**
  * Bridge to the native Ishmael CLI (bin/ish).
  */
-final class IshCliBridge
+class IshCliBridge
 {
     private ProjectContext $context;
 
@@ -24,11 +24,12 @@ final class IshCliBridge
      * @param string $command The command name (e.g., 'make:module')
      * @param array<string, mixed> $options Key-value options (e.g., ['name' => 'Blog', 'api' => true])
      * @param array<int, string> $arguments Positional arguments
+     * @param string|null $customBinary Optional path to a custom 'ish' binary
      * @return array{success: bool, output: string, error: ?string, files: string[], preview?: array<int, array{path: string, content: string}>}
      */
-    public function execute(string $command, array $options = [], array $arguments = []): array
+    public function execute(string $command, array $options = [], array $arguments = [], ?string $customBinary = null): array
     {
-        $ish = $this->context->getIshBinary();
+        $ish = $customBinary ?: $this->context->getIshBinary();
         if ($ish === null) {
             return [
                 'success' => false,

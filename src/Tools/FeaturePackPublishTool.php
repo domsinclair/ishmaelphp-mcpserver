@@ -10,14 +10,14 @@ use Ishmael\McpServer\Support\RegistryToolHelper;
 use Exception;
 
 /**
- * Publishes a feature pack to the centralized registry.
- * Implements Tiered Identity & Trust flow.
+ * Publishes a feature pack to the Ishmael Registry with a high-trust "Pack and Submit" workflow.
  */
-final class FeaturePackPublishTool implements Tool
+class FeaturePackPublishTool implements Tool
 {
-    private ProjectContext $context;
-    private IshCliBridge $cli;
+    protected ProjectContext $context;
+    protected IshCliBridge $cli;
 
+    private const AMENDED_CLI_PATH = "D:\\JetBrainsProjects\\PhpStorm\\ish\\IshmaelPHP-Core\\bin\\ish";
     private const DEFAULT_REGISTRY_URL = "https://vtl-ishmael-registry.test";
 
     public function __construct(ProjectContext $context)
@@ -28,31 +28,33 @@ final class FeaturePackPublishTool implements Tool
 
     public function getName(): string
     {
-        return "ish-featurepack-publish";
+        return "ish:featurePack:publish";
     }
 
     public function getDescription(): string
     {
-        return "Publishes a feature pack to the Ishmael Registry with Tiered Identity (WebAuthn/Standard).";
+        return "Orchestrates the entire lifecycle of a feature pack from the local environment to the registry, including zipping, metadata verification, and secure authentication.";
     }
 
     public function getInputSchema(): array
     {
         return [
             "type" => "object",
-            "required" => ["module"],
+            "required" => ["module_name"],
             "properties" => [
-                "module" => [
+                "module_name" => [
                     "type" => "string",
-                    "description" => "The name of the module to publish (e.g., \"Blog\")."
+                    "description" => "The name of the module to pack and publish."
                 ],
-                "token" => [
+                "registry_url" => [
                     "type" => "string",
-                    "description" => "The signed Upload Token obtained from the Registry Auth handshake."
+                    "description" => "The registry URL. Defaults to https://vtl-ishmael-registry.test.",
+                    "default" => self::DEFAULT_REGISTRY_URL
                 ],
-                "registryUrl" => [
-                    "type" => "string",
-                    "description" => "Optional registry URL override."
+                "force_upgrade" => [
+                    "type" => "boolean",
+                    "description" => "If true, force the hardware key (Tier A) setup.",
+                    "default" => false
                 ],
             ],
         ];
@@ -66,8 +68,7 @@ final class FeaturePackPublishTool implements Tool
             "properties" => [
                 "success" => ["type" => "boolean"],
                 "message" => ["type" => "string"],
-                "authUrl" => ["type" => "string", "description" => "URL to open for authentication if token is missing."],
-                "requiresAuth" => ["type" => "boolean"],
+                "status" => ["type" => "string"],
                 "error" => ["type" => "string"],
             ],
         ];
@@ -75,88 +76,194 @@ final class FeaturePackPublishTool implements Tool
 
     public function execute(array $input): array
     {
-        $module = (string)$input["module"];
-        $token = isset($input["token"]) ? (string)$input["token"] : null;
-        $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : RegistryToolHelper::getRegistryBaseUrl($this->context);
-        
-        $config = RegistryToolHelper::getConfig($this->context);
-        $registerUrl = isset($config['registry_register_url']) ? (string)$config['registry_register_url'] : rtrim($registryUrl, '/') . "/auth/register";
-        $authUrl = isset($config['registry_auth_url']) ? (string)$config['registry_auth_url'] : rtrim($registryUrl, '/') . "/auth/publish";
-        $uploadUrl = isset($config['registry_upload_url']) ? (string)$config['registry_upload_url'] : rtrim($registryUrl, '/') . "/api/publish/upload";
+        $moduleName = (string)$input["module_name"];
+        $registryUrl = (string)($input["registry_url"] ?? self::DEFAULT_REGISTRY_URL);
+        $forceUpgrade = (bool)($input["force_upgrade"] ?? false);
 
-        if (!$token) {
-            $authFlowUrl = $authUrl . "?module=" . urlencode($module);
-            
-            // Try to open the browser automatically on Windows
-            if (PHP_OS_FAMILY === "Windows") {
-                @shell_exec("start " . escapeshellarg($authFlowUrl));
-            }
-
+        $root = $this->context->getRoot();
+        if (!$root) {
             return [
-                "success" => true,
-                "message" => "Authentication required. Please complete the handshake in your browser.",
-                "authUrl" => $authFlowUrl,
-                "requiresAuth" => true
+                "success" => false,
+                "message" => "Project root not found.",
+                "error" => "Ensure you are in an Ishmael project root."
             ];
         }
 
-        // 1. Ensure the module is packed
-        $packResult = $this->cli->execute("feature:pack", [], [$module]);
+        // Pre-flight Validation
+        $moduleDir = $root . DIRECTORY_SEPARATOR . "Modules" . DIRECTORY_SEPARATOR . $moduleName;
+        $contextFile = $moduleDir . DIRECTORY_SEPARATOR . ".ish-context.md";
+        $warnings = [];
+        
+        // Note: we don't return early if moduleDir doesn't exist yet, 
+        // as the 'ish' command might handle it or it might be in a different structure.
+        // However, usually it's in Modules/.
+        if (is_dir($moduleDir) && !is_file($contextFile)) {
+            $warnings[] = "Warning: .ish-context.md is missing in the module directory. This may affect the AI-readiness score in the registry.";
+        }
+
+        // Step A: Metadata & ZIP Generation
+        $distDir = $root . DIRECTORY_SEPARATOR . "dist";
+        if (!is_dir($distDir)) {
+            @mkdir($distDir, 0755, true);
+        }
+
+        $registryJsonPath = $distDir . DIRECTORY_SEPARATOR . "registry.json";
+        $zipPath = $distDir . DIRECTORY_SEPARATOR . strtolower($moduleName) . ".zip";
+
+        // Clean up previous artifacts
+        if (is_file($registryJsonPath)) @unlink($registryJsonPath);
+        if (is_file($zipPath)) @unlink($zipPath);
+
+        $packResult = $this->cli->execute("feature:pack", [
+            "out" => "./dist",
+            "registry-out" => "./dist/registry.json"
+        ], [$moduleName], self::AMENDED_CLI_PATH);
+
         if (!$packResult["success"]) {
             return [
                 "success" => false,
-                "message" => "Failed to pack module for publishing.",
+                "message" => "Failed to generate feature pack artifacts.",
                 "error" => $packResult["error"]
             ];
         }
 
-        // 2. Find the ZIP file
-        $root = $this->context->getRoot();
-        $zipPath = $root . DIRECTORY_SEPARATOR . "storage" . DIRECTORY_SEPARATOR . "feature-packs" . DIRECTORY_SEPARATOR . strtolower($module) . ".zip";
-        
-        if (!is_file($zipPath)) {
-             // Fallback: check if the output mentions the path
-             if (preg_match("/Packaged to: (.*\.zip)/", $packResult["output"], $matches)) {
-                 $zipPath = trim($matches[1]);
-             }
-        }
-
-        if (!is_file($zipPath)) {
+        // Parse registry.json to verify mandatory fields
+        if (!is_file($registryJsonPath)) {
             return [
                 "success" => false,
-                "message" => "Could not locate feature pack ZIP file at $zipPath",
+                "message" => "registry.json was not generated.",
             ];
         }
 
-        // 3. Upload to Registry
-        return $this->uploadToRegistry($uploadUrl, $zipPath, $token);
+        $metadataContent = file_get_contents($registryJsonPath);
+        $metadata = json_decode($metadataContent, true);
+        $mandatoryFields = ["title", "category", "capabilities"];
+        foreach ($mandatoryFields as $field) {
+            if (empty($metadata[$field])) {
+                return [
+                    "success" => false,
+                    "message" => "Metadata verification failed: mandatory field '$field' is missing in registry.json.",
+                ];
+            }
+        }
+
+        // Step B: Local Authentication Listener
+        $port = 8080;
+        $callbackUrl = "http://localhost:$port/callback";
+        
+        // Open browser for Step C
+        $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName) . "&redirect_uri=" . urlencode($callbackUrl);
+        if ($forceUpgrade) {
+            $authUrl .= "&force_upgrade=1";
+        }
+
+        // Inform user about browser handshake
+        $this->openBrowser($authUrl);
+
+        // Start listener to capture token
+        $token = $this->listenForToken($port);
+        
+        if (!$token) {
+            $this->cleanup($distDir, $moduleName);
+            return [
+                "success" => false,
+                "message" => "Authentication failed or timed out. Could not capture Upload Token.",
+            ];
+        }
+
+        // Step D: Secure Upload
+        $uploadUrl = rtrim($registryUrl, '/') . "/api/publish/upload";
+        $uploadResult = $this->uploadToRegistry($uploadUrl, $zipPath, $metadataContent, $token);
+
+        // Cleanup
+        $this->cleanup($distDir, $moduleName);
+
+        if (!$uploadResult["success"]) {
+            return $uploadResult;
+        }
+
+        $message = "Successfully published '$moduleName' to the registry.";
+        if (isset($uploadResult['tier']) && $uploadResult['tier'] === 'A') {
+            $message .= " [Hardware Verified]";
+        }
+        
+        if (!empty($warnings)) {
+            $message .= "\n" . implode("\n", $warnings);
+        }
+
+        return [
+            "success" => true,
+            "message" => $message,
+            "status" => isset($uploadResult['tier']) && $uploadResult['tier'] === 'A' ? "Hardware Verified" : "Standard Verified"
+        ];
     }
 
-
-    private function uploadToRegistry(string $uploadUrl, string $zipPath, string $token): array
+    protected function listenForToken(int $port): ?string
     {
+        $server = @stream_socket_server("tcp://127.0.0.1:$port", $errno, $errstr);
+        if (!$server) {
+            return null;
+        }
+
+        $timeout = 120; // 2 minutes timeout
+        $start = time();
+        $token = null;
+
+        while (time() - $start < $timeout) {
+            $read = [$server];
+            $write = null;
+            $except = null;
+            if (stream_select($read, $write, $except, 1) > 0) {
+                $conn = stream_socket_accept($server);
+                if ($conn) {
+                    $request = fread($conn, 4096);
+                    if (preg_match('/GET \/callback\?token=([^&\s]+)/', $request, $matches)) {
+                        $token = $matches[1];
+                        
+                        $response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n";
+                        $response .= "<html><head><title>Ishmael Auth</title></head><body><h1>Authentication Successful</h1><p>The token has been captured by the MCP server. You can close this window now.</p></body></html>";
+                        fwrite($conn, $response);
+                        fclose($conn);
+                        break;
+                    }
+                    fclose($conn);
+                }
+            }
+        }
         
-        // Use PHP CURL for multipart upload
+        fclose($server);
+        return $token;
+    }
+
+    protected function openBrowser(string $url): void
+    {
+        if (PHP_OS_FAMILY === "Windows") {
+            @shell_exec("start " . escapeshellarg($url));
+        }
+    }
+
+    protected function uploadToRegistry(string $uploadUrl, string $zipPath, string $metadataJson, string $token): array
+    {
         if (!function_exists("curl_init")) {
             return [
                 "success" => false,
-                "message" => "CURL PHP extension is required for publishing.",
+                "message" => "CURL extension is missing.",
             ];
         }
 
         $ch = curl_init();
         
-        $file = new \CURLFile($zipPath, "application/zip", basename($zipPath));
-        
+        $postFields = [
+            'pack' => new \CURLFile($zipPath, 'application/zip', basename($zipPath)),
+            'metadata' => $metadataJson,
+        ];
+
         curl_setopt($ch, CURLOPT_URL, $uploadUrl);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, [
-            "pack" => $file,
-            "token" => $token
-        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer " . $token,
+            "Authorization: Bearer $token",
             "Accept: application/json"
         ]);
         
@@ -168,7 +275,7 @@ final class FeaturePackPublishTool implements Tool
         if ($error) {
             return [
                 "success" => false,
-                "message" => "CURL Error during upload: " . $error,
+                "message" => "CURL Error: $error",
             ];
         }
 
@@ -177,27 +284,32 @@ final class FeaturePackPublishTool implements Tool
         if ($httpCode >= 200 && $httpCode < 300) {
             return [
                 "success" => true,
-                "message" => $data["message"] ?? "Successfully published to registry!",
-                "requiresAuth" => false
+                "tier" => $data['tier'] ?? 'B',
+                "data" => $data
             ];
-        }
-
-        $message = "Registry rejected upload (HTTP $httpCode)";
-        $error = $data["error"] ?? (string)$response;
-
-        if ($httpCode === 403) {
-            $message = "Hardware Key required (Tier A).";
-            $error = "This vendor account requires a hardware key (YubiKey/TouchID) to publish, but none are registered or verified. Please use 'vendor:upgrade' to register a key.";
-        } elseif ($httpCode === 409) {
-            $message = "Duplicate version.";
-            $error = "This version of the feature pack has already been published to the registry.";
         }
 
         return [
             "success" => false,
-            "message" => $message,
-            "error" => $error,
-            "requiresAuth" => ($httpCode === 401)
+            "message" => "Upload failed (HTTP $httpCode)",
+            "error" => $data['error'] ?? (string)$response
         ];
+    }
+
+    private function cleanup(string $distDir, string $moduleName): void
+    {
+        $registryJsonPath = $distDir . DIRECTORY_SEPARATOR . "registry.json";
+        $zipPath = $distDir . DIRECTORY_SEPARATOR . strtolower($moduleName) . ".zip";
+
+        if (is_file($registryJsonPath)) @unlink($registryJsonPath);
+        if (is_file($zipPath)) @unlink($zipPath);
+        
+        // Optionally remove dist dir if empty
+        if (is_dir($distDir)) {
+            $files = array_diff(scandir($distDir), array('.', '..'));
+            if (empty($files)) {
+                @rmdir($distDir);
+            }
+        }
     }
 }
