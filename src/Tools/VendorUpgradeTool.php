@@ -37,7 +37,9 @@ class VendorUpgradeTool implements Tool
             "properties" => [
                 "vendor" => ["type" => "string", "description" => "The vendor name (slug) to upgrade"],
                 "port" => ["type" => "integer", "description" => "Local listener port", "default" => 8080],
-                "registryUrl" => ["type" => "string", "description" => "Registry base URL override"]
+                "registryUrl" => ["type" => "string", "description" => "Registry base URL override"],
+                "noBrowser" => ["type" => "boolean", "description" => "If true, skips server-initiated browser launch.", "default" => false],
+                "noListener" => ["type" => "boolean", "description" => "If true, skip the local TCP listener and just return the auth URL.", "default" => false]
             ]
         ];
     }
@@ -64,24 +66,51 @@ class VendorUpgradeTool implements Tool
         $config = RegistryToolHelper::getConfig($this->context);
         $upgradeBaseUrl = isset($config['registry_upgrade_url']) ? (string)$config['registry_upgrade_url'] : rtrim($registryUrl, '/') . "/auth/keys/setup";
 
-        $listener = RegistryToolHelper::startListener($port);
-        if (!$listener) {
-            return [
-                "success" => false,
-                "message" => "Could not start local listener on port $port or nearby ports.",
-            ];
-        }
+        $noListener = (bool)($input["noListener"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+        $actualPort = $port;
+        $server = null;
 
-        [$server, $actualPort] = $listener;
-        $redirectUri = "http://localhost:$actualPort/callback";
+        if (!$noListener) {
+            $listener = RegistryToolHelper::startListener($port);
+            if (!$listener) {
+                $noListener = true; // Fallback to manual
+            } else {
+                [$server, $actualPort] = $listener;
+            }
+        }
 
         $params = [
             "upgrade" => "1",
-            "vendor" => $vendor,
-            "redirect_uri" => $redirectUri
+            "vendor" => $vendor
         ];
 
+        if (!$noListener) {
+            $params["redirect_uri"] = "http://localhost:$actualPort/callback";
+        }
+
         $authUrl = $upgradeBaseUrl . (str_contains($upgradeBaseUrl, '?') ? '&' : '?') . http_build_query($params);
+
+        if ($noListener) {
+            return [
+                "success" => true,
+                "message" => "Please complete security key setup at the link provided.",
+                "authUrl" => $authUrl,
+                "manual" => true
+            ];
+        }
+
+        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+
+        if ($noBrowser) {
+            if ($server) {
+                fclose($server);
+            }
+            return [
+                "success" => true,
+                "message" => "Upgrade URL generated. Please complete security setup in your browser.",
+                "authUrl" => $authUrl
+            ];
+        }
 
         if (PHP_OS_FAMILY === "Windows") {
             @shell_exec("start " . escapeshellarg($authUrl));

@@ -177,7 +177,7 @@ class FeaturePackPublishToolTest extends TestCase
              });
 
         $this->tool->method('listenForToken')
-             ->willReturn('fake-token');
+             ->willReturn(['token' => 'fake-token']);
              
         $this->tool->method('uploadToRegistry')
              ->willReturn([

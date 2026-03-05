@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Ishmael\McpServer\Tools;
 
@@ -99,25 +100,28 @@ class VendorAuthenticateTool implements Tool
             ];
         }
 
-        // Try to open browser for listener-based flow
-        if (PHP_OS_FAMILY === "Windows") {
-            @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
-        }
+        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+
+        if ($noBrowser) {
+            if ($server) {
+                fclose($server);
+            }
+            return [
                 "success" => true,
                 "message" => "Authentication URL generated. Please complete authentication in your browser and copy the token.",
                 "authUrl" => $authUrl
             ];
         }
 
-        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
-
-        // Try to open browser early
-        if (!$noBrowser && PHP_OS_FAMILY === "Windows") {
+        // Try to open browser for listener-based flow
+        if (PHP_OS_FAMILY === "Windows") {
             @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
         }
 
         $resultData = RegistryToolHelper::captureToken($server, 120);
-        fclose($server);
+        if ($server) {
+            fclose($server);
+        }
 
         if ($resultData && isset($resultData['token'])) {
             return [

@@ -60,6 +60,16 @@ class FeaturePackPublishTool implements Tool
                     "type" => "string",
                     "description" => "Optional pre-obtained upload token. If provided, the local listener is skipped."
                 ],
+                "noBrowser" => [
+                    "type" => "boolean",
+                    "description" => "If true, skips server-initiated browser launch.",
+                    "default" => false
+                ],
+                "noListener" => [
+                    "type" => "boolean",
+                    "description" => "If true, skip the local TCP listener and just return the auth URL.",
+                    "default" => false
+                ],
             ],
         ];
     }
@@ -156,7 +166,7 @@ class FeaturePackPublishTool implements Tool
 
         if (empty($token)) {
             $port = RegistryToolHelper::getListenerPort($this->context, 8080);
-            $noListener = (getenv('ISH_MCP_NO_BROWSER') === '1');
+            $noListener = (bool)($input["noListener"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
             $server = null;
 
             if (!$noListener) {
@@ -182,14 +192,28 @@ class FeaturePackPublishTool implements Tool
                 ];
             }
 
+            $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+
             if ($forceUpgrade) {
                 $authUrl .= "&force_upgrade=1";
+            }
+
+            if ($noBrowser) {
+                if ($server) {
+                    fclose($server);
+                }
+                return [
+                    "success" => true,
+                    "message" => "Authentication URL generated. Please complete authentication in your browser and obtain the token.",
+                    "status" => "awaiting_token",
+                    "authUrl" => $authUrl
+                ];
             }
 
             $this->openBrowser($authUrl);
 
             // Capture token
-            $resultData = RegistryToolHelper::captureToken($server, 120);
+            $resultData = $this->listenForToken($server, 120);
             if ($server) fclose($server);
 
             if ($resultData && isset($resultData['token'])) {
@@ -237,6 +261,11 @@ class FeaturePackPublishTool implements Tool
         if (PHP_OS_FAMILY === "Windows") {
             @shell_exec("start " . escapeshellarg($url));
         }
+    }
+
+    protected function listenForToken($server, int $timeout): ?array
+    {
+        return RegistryToolHelper::captureToken($server, $timeout);
     }
 
     protected function uploadToRegistry(string $uploadUrl, string $zipPath, string $metadataJson, string $token): array

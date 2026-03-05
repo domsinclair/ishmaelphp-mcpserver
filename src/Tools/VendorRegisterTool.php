@@ -38,7 +38,8 @@ class VendorRegisterTool implements Tool
                 "url" => ["type" => "string", "description" => "Developer website"],
                 "port" => ["type" => "integer", "description" => "Local listener port", "default" => 8080],
                 "registryUrl" => ["type" => "string", "description" => "Registry base URL override"],
-                "noBrowser" => ["type" => "boolean", "description" => "If true, skips server-initiated browser launch.", "default" => false]
+                "noBrowser" => ["type" => "boolean", "description" => "If true, skips server-initiated browser launch.", "default" => false],
+                "noListener" => ["type" => "boolean", "description" => "If true, skip the local TCP listener and just return the auth URL.", "default" => false]
             ]
         ];
     }
@@ -66,19 +67,31 @@ class VendorRegisterTool implements Tool
         $config = RegistryToolHelper::getConfig($this->context);
         $registerBaseUrl = isset($config['registry_register_url']) ? (string)$config['registry_register_url'] : rtrim($registryUrl, '/') . "/auth/register";
 
-        $params = [
-            "redirect_uri" => "http://localhost:$port/callback"
-        ];
+        $noListener = (bool)($input["noListener"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+        $actualPort = $port;
+        $server = null;
+
+        if (!$noListener) {
+            $listener = RegistryToolHelper::startListener($port);
+            if (!$listener) {
+                $noListener = true; // Fallback to manual
+            } else {
+                [$server, $actualPort] = $listener;
+            }
+        }
+
+        $params = [];
+        if (!$noListener) {
+            $params["redirect_uri"] = "http://localhost:$actualPort/callback";
+        }
+
         if (!empty($input["name"])) $params["name"] = $input["name"];
         if (!empty($input["email"])) $params["email"] = $input["email"];
         if (!empty($input["url"])) $params["url"] = $input["url"];
         
         $authUrl = $registerBaseUrl . (str_contains($registerBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
-        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
-
-        // If we are strictly confining to local and bypassing listeners
-        if ($noBrowser) {
+        if ($noListener) {
              return [
                 "success" => true,
                 "message" => "Please complete registration at the link provided. Once finished, use 'vendor:authenticate' with the token provided by the registry.",
@@ -87,20 +100,22 @@ class VendorRegisterTool implements Tool
             ];
         }
 
+        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+
+        if ($noBrowser) {
+            if ($server) {
+                fclose($server);
+            }
+            return [
+                "success" => true,
+                "message" => "Registration URL generated. Please complete registration in your browser and then use 'vendor:authenticate'.",
+                "authUrl" => $authUrl
+            ];
+        }
+
         // Try to open browser early
         if (PHP_OS_FAMILY === "Windows") {
             @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
-        }
-
-        // Start listener
-        $listener = RegistryToolHelper::startListener($port);
-        if (!$listener) {
-            return [
-                "success" => true,
-                "message" => "Could not start local listener, please register manually.",
-                "authUrl" => $authUrl,
-                "manual" => true
-            ];
         }
 
         $start = time();
