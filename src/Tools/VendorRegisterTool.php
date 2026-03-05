@@ -63,36 +63,44 @@ class VendorRegisterTool implements Tool
     {
         $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : RegistryToolHelper::getRegistryBaseUrl($this->context);
         $port = $input["port"] ?? RegistryToolHelper::getListenerPort($this->context, 8080);
-
         $config = RegistryToolHelper::getConfig($this->context);
         $registerBaseUrl = isset($config['registry_register_url']) ? (string)$config['registry_register_url'] : rtrim($registryUrl, '/') . "/auth/register";
 
-        // Start listener with port discovery
-        $listener = RegistryToolHelper::startListener($port);
-        if (!$listener) {
-            return [
-                "success" => false,
-                "message" => "Could not start local listener on port $port or nearby ports.",
-            ];
-        }
-
-        [$server, $actualPort] = $listener;
-        $redirectUri = "http://localhost:$actualPort/callback";
-
         $params = [
-            "redirect_uri" => $redirectUri
+            "redirect_uri" => "http://localhost:$port/callback"
         ];
         if (!empty($input["name"])) $params["name"] = $input["name"];
         if (!empty($input["email"])) $params["email"] = $input["email"];
         if (!empty($input["url"])) $params["url"] = $input["url"];
-
+        
         $authUrl = $registerBaseUrl . (str_contains($registerBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
         $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
 
+        // If we are strictly confining to local and bypassing listeners
+        if ($noBrowser) {
+             return [
+                "success" => true,
+                "message" => "Please complete registration at the link provided. Once finished, use 'vendor:authenticate' with the token provided by the registry.",
+                "authUrl" => $authUrl,
+                "manual" => true
+            ];
+        }
+
         // Try to open browser early
-        if (!$noBrowser && PHP_OS_FAMILY === "Windows") {
+        if (PHP_OS_FAMILY === "Windows") {
             @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
+        }
+
+        // Start listener
+        $listener = RegistryToolHelper::startListener($port);
+        if (!$listener) {
+            return [
+                "success" => true,
+                "message" => "Could not start local listener, please register manually.",
+                "authUrl" => $authUrl,
+                "manual" => true
+            ];
         }
 
         $start = time();

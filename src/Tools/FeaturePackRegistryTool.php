@@ -178,8 +178,9 @@ final class FeaturePackRegistryTool implements Tool
                 curl_setopt($ch, CURLOPT_URL, $registryUrl);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+                curl_setopt($ch, CURLOPT_DNS_CACHE_TIMEOUT, 10);
                 curl_setopt($ch, CURLOPT_USERAGENT, 'Ishmael-MCP-Server/0.4');
 
                 if ($insecure) {

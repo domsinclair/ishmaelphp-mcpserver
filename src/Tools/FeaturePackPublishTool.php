@@ -155,19 +155,33 @@ class FeaturePackPublishTool implements Tool
         $token = (string)($input["token"] ?? "");
 
         if (empty($token)) {
-            $port = 8080;
-            $listener = RegistryToolHelper::startListener($port);
-            if (!$listener) {
+            $port = RegistryToolHelper::getListenerPort($this->context, 8080);
+            $noListener = (getenv('ISH_MCP_NO_BROWSER') === '1');
+            $server = null;
+
+            if (!$noListener) {
+                $listener = RegistryToolHelper::startListener($port);
+                if ($listener) {
+                    [$server, $actualPort] = $listener;
+                    $callbackUrl = "http://localhost:$actualPort/callback";
+                    $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName) . "&redirect_uri=" . urlencode($callbackUrl);
+                } else {
+                    $noListener = true;
+                }
+            }
+
+            if ($noListener) {
+                $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName);
+                if ($forceUpgrade) $authUrl .= "&force_upgrade=1";
                 return [
-                    "success" => false,
-                    "message" => "Could not start local listener on port $port or nearby ports. Please provide a 'token' parameter or ensure port is free.",
+                    "success" => true,
+                    "message" => "Please obtain an upload token manually at the link provided.",
+                    "status" => "awaiting_token",
+                    "authUrl" => $authUrl,
+                    "manual" => true
                 ];
             }
-            [$server, $actualPort] = $listener;
-            $callbackUrl = "http://localhost:$actualPort/callback";
-            
-            // Open browser for handshake
-            $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName) . "&redirect_uri=" . urlencode($callbackUrl);
+
             if ($forceUpgrade) {
                 $authUrl .= "&force_upgrade=1";
             }
@@ -176,7 +190,7 @@ class FeaturePackPublishTool implements Tool
 
             // Capture token
             $resultData = RegistryToolHelper::captureToken($server, 120);
-            fclose($server);
+            if ($server) fclose($server);
 
             if ($resultData && isset($resultData['token'])) {
                 $token = $resultData['token'];

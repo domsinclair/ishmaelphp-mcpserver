@@ -66,26 +66,22 @@ class VendorAuthenticateTool implements Tool
         $config = RegistryToolHelper::getConfig($this->context);
         $authBaseUrl = isset($config['registry_auth_url']) ? (string)$config['registry_auth_url'] : rtrim($registryUrl, '/') . "/auth/publish";
 
-        $noListener = (bool)($input["noListener"] ?? false);
+        $noListener = (bool)($input["noListener"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
         $actualPort = $port;
         $server = null;
 
         if (!$noListener) {
             $listener = RegistryToolHelper::startListener($port);
             if (!$listener) {
-                return [
-                    "success" => false,
-                    "message" => "Could not start local listener on port $port or nearby ports. Try enabling 'noListener' or using a different port.",
-                ];
+                $noListener = true; // Fallback to manual
+            } else {
+                [$server, $actualPort] = $listener;
             }
-            [$server, $actualPort] = $listener;
         }
-
-        $redirectUri = "http://localhost:$actualPort/callback";
 
         $params = [];
         if (!$noListener) {
-            $params["redirect_uri"] = $redirectUri;
+            $params["redirect_uri"] = "http://localhost:$actualPort/callback";
         }
         
         if (!empty($input["module"])) $params["module"] = $input["module"];
@@ -96,6 +92,17 @@ class VendorAuthenticateTool implements Tool
 
         if ($noListener) {
             return [
+                "success" => true,
+                "message" => "Please obtain a token at the link provided and paste it when prompted.",
+                "authUrl" => $authUrl,
+                "manual" => true
+            ];
+        }
+
+        // Try to open browser for listener-based flow
+        if (PHP_OS_FAMILY === "Windows") {
+            @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
+        }
                 "success" => true,
                 "message" => "Authentication URL generated. Please complete authentication in your browser and copy the token.",
                 "authUrl" => $authUrl
