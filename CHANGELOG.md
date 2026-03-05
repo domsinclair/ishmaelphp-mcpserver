@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.49](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.48...v0.7.49) (2026-03-05)
+
+
+### Bug Fixes
+
+* refresh metadata ([0b76a9e](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/0b76a9e2d82e044e31869fa3a607cf72c9b3005f))
+
 ## [0.7.48](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.47...v0.7.48) (2026-03-05)
 
 
