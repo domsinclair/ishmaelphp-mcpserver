@@ -37,9 +37,16 @@ final class ClassMetadataScanner
 
             $className = $this->getClassName($filePath, $directory, $namespacePrefix);
             
-            if ($className && class_exists($className)) {
-                $role = $this->detectRole($filePath);
-                $metadata[$className] = array_merge(['role' => $role], $this->extractMetadata($className));
+            if ($className) {
+                try {
+                    if (class_exists($className)) {
+                        $role = $this->detectRole($filePath);
+                        $metadata[$className] = array_merge(['role' => $role], $this->extractMetadata($className));
+                    }
+                } catch (\Throwable $e) {
+                    // Skip classes that cannot be loaded (e.g. missing interfaces or dependencies)
+                    continue;
+                }
             }
         }
 

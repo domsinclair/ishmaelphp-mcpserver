@@ -42,11 +42,15 @@ final class RouteIntegrityChecker
         }
 
         // Handle FQCN
-        if (class_exists($handler)) {
-            if (method_exists($handler, '__invoke')) {
-                return ['valid' => true, 'error' => null];
+        try {
+            if (class_exists($handler)) {
+                if (method_exists($handler, '__invoke')) {
+                    return ['valid' => true, 'error' => null];
+                }
+                return ['valid' => false, 'error' => "Class {$handler} exists but has no __invoke method"];
             }
-            return ['valid' => false, 'error' => "Class {$handler} exists but has no __invoke method"];
+        } catch (\Throwable $e) {
+            return ['valid' => false, 'error' => "Class {$handler} failed to load: " . $e->getMessage()];
         }
 
         return ['valid' => false, 'error' => "Invalid handler format: {$handler}"];
@@ -69,8 +73,12 @@ final class RouteIntegrityChecker
         }
 
         // Check if class exists
-        if (!class_exists($class)) {
-            return ['valid' => false, 'error' => "Controller class {$class} not found"];
+        try {
+            if (!class_exists($class)) {
+                return ['valid' => false, 'error' => "Controller class {$class} not found"];
+            }
+        } catch (\Throwable $e) {
+            return ['valid' => false, 'error' => "Controller class {$class} failed to load: " . $e->getMessage()];
         }
 
         // Check if method exists

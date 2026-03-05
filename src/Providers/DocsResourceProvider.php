@@ -6,6 +6,7 @@
 
     use Ishmael\McpServer\Contracts\ResourceProvider;
     use Ishmael\McpServer\Project\PathSandbox;
+    use Ishmael\McpServer\Support\FrameworkMapParser;
 
     /**
 
@@ -89,7 +90,12 @@
         $resources = $this->listResources();
         foreach ($resources as $res) {
             if ($res['uri'] === $uri && isset($res['path']) && is_file($res['path'])) {
-                return file_get_contents($res['path']);
+                $content = file_get_contents($res['path']);
+                if ($res['mimeType'] === 'application/json' && str_ends_with($res['path'], '.md')) {
+                    // Special case for framework-map.md being served as JSON
+                    return json_encode(FrameworkMapParser::parse($content), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                }
+                return $content;
             }
         }
         return null;
@@ -169,12 +175,16 @@
                 // Handle Markdown files
                 if (preg_match('~\.md$~i', $relPath) === 1) {
                     $slug = strtolower(preg_replace('~\.md$~i', '', $uriPath));
+                    $mimeType = 'text/markdown';
+                    if ($slug === 'core/reference/framework-map') {
+                        $mimeType = 'application/json';
+                    }
                     
                     $items[] = [
                         'uri' => 'docs:' . $slug,
                         'name' => basename($relPath),
                         'description' => 'Documentation: ' . ($isModulesRoot ? "Module $moduleName - $subPath" : $relPath),
-                        'mimeType' => 'text/markdown',
+                        'mimeType' => $mimeType,
                         'path' => $path,
                     ];
                 } 
