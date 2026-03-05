@@ -56,6 +56,10 @@ class FeaturePackPublishTool implements Tool
                     "description" => "If true, force the hardware key (Tier A) setup.",
                     "default" => false
                 ],
+                "token" => [
+                    "type" => "string",
+                    "description" => "Optional pre-obtained upload token. If provided, the local listener is skipped."
+                ],
             ],
         ];
     }
@@ -147,27 +151,43 @@ class FeaturePackPublishTool implements Tool
             }
         }
 
-        // Step B: Local Authentication Listener
-        $port = 8080;
-        $callbackUrl = "http://localhost:$port/callback";
-        
-        // Open browser for Step C
-        $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName) . "&redirect_uri=" . urlencode($callbackUrl);
-        if ($forceUpgrade) {
-            $authUrl .= "&force_upgrade=1";
+        // Step B: Secure Authentication (Handshake)
+        $token = (string)($input["token"] ?? "");
+
+        if (empty($token)) {
+            $port = 8080;
+            $listener = RegistryToolHelper::startListener($port);
+            if (!$listener) {
+                return [
+                    "success" => false,
+                    "message" => "Could not start local listener on port $port or nearby ports. Please provide a 'token' parameter or ensure port is free.",
+                ];
+            }
+            [$server, $actualPort] = $listener;
+            $callbackUrl = "http://localhost:$actualPort/callback";
+            
+            // Open browser for handshake
+            $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName) . "&redirect_uri=" . urlencode($callbackUrl);
+            if ($forceUpgrade) {
+                $authUrl .= "&force_upgrade=1";
+            }
+
+            $this->openBrowser($authUrl);
+
+            // Capture token
+            $resultData = RegistryToolHelper::captureToken($server, 120);
+            fclose($server);
+
+            if ($resultData && isset($resultData['token'])) {
+                $token = $resultData['token'];
+            }
         }
-
-        // Inform user about browser handshake
-        $this->openBrowser($authUrl);
-
-        // Start listener to capture token
-        $token = $this->listenForToken($port);
         
-        if (!$token) {
+        if (empty($token)) {
             $this->cleanup($distDir, $moduleName);
             return [
                 "success" => false,
-                "message" => "Authentication failed or timed out. Could not capture Upload Token.",
+                "message" => "Authentication failed or timed out. Could not obtain Upload Token.",
             ];
         }
 
@@ -196,43 +216,6 @@ class FeaturePackPublishTool implements Tool
             "message" => $message,
             "status" => isset($uploadResult['tier']) && $uploadResult['tier'] === 'A' ? "Hardware Verified" : "Standard Verified"
         ];
-    }
-
-    protected function listenForToken(int $port): ?string
-    {
-        $server = @stream_socket_server("tcp://127.0.0.1:$port", $errno, $errstr);
-        if (!$server) {
-            return null;
-        }
-
-        $timeout = 120; // 2 minutes timeout
-        $start = time();
-        $token = null;
-
-        while (time() - $start < $timeout) {
-            $read = [$server];
-            $write = null;
-            $except = null;
-            if (stream_select($read, $write, $except, 1) > 0) {
-                $conn = stream_socket_accept($server);
-                if ($conn) {
-                    $request = fread($conn, 4096);
-                    if (preg_match('/GET \/callback\?token=([^&\s]+)/', $request, $matches)) {
-                        $token = $matches[1];
-                        
-                        $response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n";
-                        $response .= "<html><head><title>Ishmael Auth</title></head><body><h1>Authentication Successful</h1><p>The token has been captured by the MCP server. You can close this window now.</p></body></html>";
-                        fwrite($conn, $response);
-                        fclose($conn);
-                        break;
-                    }
-                    fclose($conn);
-                }
-            }
-        }
-        
-        fclose($server);
-        return $token;
     }
 
     protected function openBrowser(string $url): void

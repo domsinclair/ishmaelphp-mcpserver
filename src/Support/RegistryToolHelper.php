@@ -98,4 +98,48 @@ final class RegistryToolHelper
         }
         return null;
     }
+
+    /**
+     * Captures a token from a local listener.
+     * 
+     * @param resource $server The server resource from startListener.
+     * @param int $timeout Timeout in seconds.
+     * @return array|null The captured data or null on timeout.
+     */
+    public static function captureToken($server, int $timeout = 120): ?array
+    {
+        $start = time();
+        $resultData = null;
+
+        while (time() - $start < $timeout) {
+            $read = [$server];
+            $write = null;
+            $except = null;
+            if (stream_select($read, $write, $except, 1) > 0) {
+                $conn = stream_socket_accept($server);
+                if ($conn) {
+                    $request = fread($conn, 4096);
+                    if ($request && preg_match("/GET \/callback\?(.*?) HTTP/i", $request, $matches)) {
+                        parse_str($matches[1], $resultData);
+
+                        $tier = $resultData['tier'] ?? 'B';
+                        $tierName = ($tier === 'A' || $tier === 'hardware') ? 'Tier A (Hardware)' : 'Tier B (Community)';
+
+                        $responseBody = "<html><head><title>Ishmael Registry</title><style>body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f4; } .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1.1rem; text-align: center; } h1 { color: #2c3e50; }</style></head><body><div class='card'><h1>Authentication Successful</h1><p>Token captured successfully.</p><p>Trust Level: <strong>$tierName</strong></p><p>You can close this window now.</p></div></body></html>";
+                        $response = "HTTP/1.1 200 OK\r\n";
+                        $response .= "Content-Type: text/html\r\n";
+                        $response .= "Content-Length: " . strlen($responseBody) . "\r\n";
+                        $response .= "Connection: close\r\n\r\n";
+                        $response .= $responseBody;
+
+                        fwrite($conn, $response);
+                        fclose($conn);
+                        return $resultData;
+                    }
+                    fclose($conn);
+                }
+            }
+        }
+        return null;
+    }
 }
