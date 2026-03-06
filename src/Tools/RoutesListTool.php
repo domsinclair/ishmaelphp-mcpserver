@@ -44,10 +44,10 @@ final class RoutesListTool implements Tool
     {
         return [
             'type' => 'object',
-            'required' => ['routes'],
             'properties' => [
-                'routes' => [
+                'data' => [
                     'type' => 'array',
+                    'description' => 'List of HTTP routes.',
                     'items' => [
                         'type' => 'object',
                         'required' => ['method', 'path', 'handler'],
@@ -68,10 +68,24 @@ final class RoutesListTool implements Tool
                         'additionalProperties' => false,
                     ],
                 ],
-                'total' => ['type' => 'integer'],
-                'offset' => ['type' => 'integer'],
-                'limit' => ['type' => 'integer'],
-                'truncated' => ['type' => 'boolean'],
+                'meta' => [
+                    'type' => 'object',
+                    'description' => 'Pagination metadata.',
+                    'properties' => [
+                        'total' => ['type' => 'integer'],
+                        'offset' => ['type' => 'integer'],
+                        'limit' => ['type' => 'integer'],
+                        'truncated' => ['type' => 'boolean'],
+                    ],
+                ],
+                'error' => [
+                    'type' => 'object',
+                    'description' => 'Error details if the operation failed.',
+                    'properties' => [
+                        'code' => ['type' => 'integer'],
+                        'message' => ['type' => 'string'],
+                    ],
+                ],
             ],
         ];
     }
@@ -120,11 +134,13 @@ final class RoutesListTool implements Tool
             $truncated = ($offset + $limit) < $total;
 
             return [
-                'routes' => $slice,
-                'total' => $total,
-                'limit' => $limit,
-                'offset' => $offset,
-                'truncated' => $truncated,
+                'data' => $slice,
+                'meta' => [
+                    'total' => $total,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'truncated' => $truncated,
+                ],
             ];
         } catch (\Throwable $e) {
             // Log to stderr and return a structured error that the Server can wrap

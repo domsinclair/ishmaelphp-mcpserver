@@ -46,9 +46,9 @@ final class EventsListTool implements Tool
         return [
             'type' => 'object',
             'properties' => [
-                'success' => ['type' => 'boolean'],
-                'events' => [
+                'data' => [
                     'type' => 'array',
+                    'description' => 'List of registered events and their listeners.',
                     'items' => [
                         'type' => 'object',
                         'properties' => [
@@ -70,7 +70,14 @@ final class EventsListTool implements Tool
                         ]
                     ]
                 ],
-                'error' => ['type' => ['string', 'null']],
+                'error' => [
+                    'type' => 'object',
+                    'description' => 'Error details if the operation failed.',
+                    'properties' => [
+                        'code' => ['type' => 'integer'],
+                        'message' => ['type' => 'string'],
+                    ]
+                ],
             ],
         ];
     }
@@ -82,25 +89,25 @@ final class EventsListTool implements Tool
 
         if (!$result['success']) {
             return [
-                'success' => false,
-                'events' => [],
-                'error' => $result['error'] ?? 'Failed to execute events:list',
+                'error' => [
+                    'code' => 500,
+                    'message' => $result['error'] ?? 'Failed to execute events:list',
+                ],
             ];
         }
 
-        $data = json_decode($result['output'], true);
+        $parsed = json_decode($result['output'], true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return [
-                'success' => false,
-                'events' => [],
-                'error' => 'Failed to parse JSON output: ' . json_last_error_msg(),
+                'error' => [
+                    'code' => 500,
+                    'message' => 'Failed to parse JSON output: ' . json_last_error_msg(),
+                ],
             ];
         }
 
         return [
-            'success' => true,
-            'events' => $data['events'] ?? [],
-            'error' => null,
+            'data' => $parsed['events'] ?? [],
         ];
     }
 }

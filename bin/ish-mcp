@@ -52,6 +52,7 @@
     use Ishmael\McpServer\Providers\IshHealthResourceProvider;
     use Ishmael\McpServer\Providers\AiContextResourceProvider;
     use Ishmael\McpServer\Providers\IntentMapResourceProvider;
+    use Ishmael\McpServer\Providers\ConfigAppResourceProvider;
     use Ishmael\McpServer\Providers\FrameworkMapResourceProvider;
     use Ishmael\McpServer\Providers\FrameworkIntrospectionProvider;
     use Ishmael\McpServer\Providers\DatabaseSchemaProvider;
@@ -205,6 +206,7 @@
         $cliMetadata = new IshCliMetadataResourceProvider($context);
         $projectHealth = new IshHealthResourceProvider($context);
         $aiContext = new AiContextResourceProvider($context);
+        $configApp = new ConfigAppResourceProvider($context);
 
         $resources = new AggregateResourceProvider([
                 $staticResources,
@@ -218,6 +220,7 @@
                 $cliMetadata,
                 $projectHealth,
                 $aiContext,
+                $configApp,
                 $introspectionProvider,
                 $dbSchemaProvider
         ]);

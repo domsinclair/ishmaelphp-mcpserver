@@ -6,6 +6,7 @@ namespace Ishmael\McpServer\Providers;
 
 use Ishmael\McpServer\Contracts\ResourceProvider;
 use Ishmael\McpServer\Support\DatabaseConnectionFactory;
+use Ishmael\McpServer\Support\DatabaseConnectionError;
 use PDO;
 use Exception;
 
@@ -39,8 +40,15 @@ final class DatabaseSchemaProvider implements ResourceProvider
             return null;
         }
 
+        $connection = $this->connectionFactory->getConnection();
+        
+        // Handle error object returned instead of PDO
+        if ($connection instanceof DatabaseConnectionError) {
+            return json_encode($connection->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        }
+
         try {
-            $pdo = $this->connectionFactory->getConnection();
+            $pdo = $connection;
             $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
 
             $schema = [

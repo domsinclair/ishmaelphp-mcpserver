@@ -68,11 +68,20 @@ final class IshManifestResourceProvider implements ResourceProvider
         }
 
         $modulesPath = $root . DIRECTORY_SEPARATOR . 'Modules';
-        \Ishmael\Core\ModuleManager::discover($modulesPath, [
-            'appEnv' => getenv('APP_ENV') ?: 'development',
-        ]);
+        try {
+            \Ishmael\Core\ModuleManager::discover($modulesPath, [
+                'appEnv' => getenv('APP_ENV') ?: 'development',
+            ]);
 
-        $modules = \Ishmael\Core\ModuleManager::$modules;
+            $modules = \Ishmael\Core\ModuleManager::$modules;
+        } catch (\Throwable $e) {
+            return json_encode([
+                'error' => 'Module discovery failed',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        }
 
         // Clean up and enrich module data for the MCP resource
         foreach ($modules as $name => &$moduleData) {

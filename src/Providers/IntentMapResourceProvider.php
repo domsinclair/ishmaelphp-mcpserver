@@ -19,9 +19,15 @@ final class IntentMapResourceProvider implements ResourceProvider
     {
         return [
             [
-                'uri' => 'ish://docs/intent-map',
+                'uri' => 'ish://intent-map',
                 'name' => 'Ishmael Intent Map',
                 'description' => 'Registry of canonical user intents, glossary of terms, and behavior contracts for the Ishmael MCP server.',
+                'mimeType' => 'application/json',
+            ],
+            [
+                'uri' => 'ish://docs/intent-map',
+                'name' => 'Ishmael Intent Map (Alias)',
+                'description' => 'Backward-compatible alias for ish://intent-map.',
                 'mimeType' => 'application/json',
             ]
         ];
@@ -29,7 +35,8 @@ final class IntentMapResourceProvider implements ResourceProvider
 
     public function readResource(string $uri): ?string
     {
-        if ($uri === 'ish://docs/intent-map') {
+        // Canonical URI and backward-compatible alias both resolve to the same resource
+        if ($uri === 'ish://intent-map' || $uri === 'ish://docs/intent-map') {
             if (is_file($this->mapPath)) {
                 return file_get_contents($this->mapPath);
             }
