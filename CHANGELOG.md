@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.52](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.51...v0.7.52) (2026-03-06)
+
+
+### Miscellaneous Chores
+
+* Fix issue related to database connection ([800397d](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/800397dff7a19b7af21f6e38ef0c4dc2ca9b59a0))
+
 ## [0.7.51](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.50...v0.7.51) (2026-03-06)
 
 
