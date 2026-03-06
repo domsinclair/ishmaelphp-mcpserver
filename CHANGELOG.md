@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.51](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.50...v0.7.51) (2026-03-06)
+
+
+### Miscellaneous Chores
+
+* Fix several issues affecting the plugin ([4342066](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/434206640944279f55c570e8831f3def1a9822d2))
+
 ## [0.7.50](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.49...v0.7.50) (2026-03-06)
 
 
