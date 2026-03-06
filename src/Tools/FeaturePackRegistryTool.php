@@ -178,12 +178,21 @@ final class FeaturePackRegistryTool implements Tool
                 curl_setopt($ch, CURLOPT_URL, $registryUrl);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
                 curl_setopt($ch, CURLOPT_DNS_CACHE_TIMEOUT, 10);
                 curl_setopt($ch, CURLOPT_USERAGENT, 'Ishmael-MCP-Server/0.4');
 
-                if ($insecure) {
+                // Auto-detect .test/.local domains (commonly used for local dev with self-signed certs)
+                $host = parse_url($registryUrl, PHP_URL_HOST);
+                $isLocalDevDomain = $host && (
+                    str_ends_with($host, '.test') ||
+                    str_ends_with($host, '.local') ||
+                    str_ends_with($host, '.localhost') ||
+                    $host === 'localhost'
+                );
+
+                if ($insecure || $isLocalDevDomain) {
                     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
                 }
