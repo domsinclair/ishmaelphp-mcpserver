@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.53](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.52...v0.7.53) (2026-03-06)
+
+
+### Miscellaneous Chores
+
+* Fix the feature pack publish process ([ca03097](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/ca03097598b839227c10e430563cb5dcd4236ff1))
+
 ## [0.7.52](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.51...v0.7.52) (2026-03-06)
 
 
