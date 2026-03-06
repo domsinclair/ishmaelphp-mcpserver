@@ -67,21 +67,25 @@ class VendorAuthenticateTool implements Tool
         $config = RegistryToolHelper::getConfig($this->context);
         $authBaseUrl = isset($config['registry_auth_url']) ? (string)$config['registry_auth_url'] : rtrim($registryUrl, '/') . "/auth/publish";
 
-        $noListener = (bool)($input["noListener"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+        $noListener = (bool)($input["noListener"] ?? false);
+        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
         $actualPort = $port;
         $server = null;
+        $listenerFailed = false;
 
+        // Try to start listener for automatic token capture
         if (!$noListener) {
             $listener = RegistryToolHelper::startListener($port);
-            if (!$listener) {
-                $noListener = true; // Fallback to manual
-            } else {
+            if ($listener) {
                 [$server, $actualPort] = $listener;
+            } else {
+                $listenerFailed = true;
             }
         }
 
+        // Build URL params - only include redirect_uri if we have a working listener
         $params = [];
-        if (!$noListener) {
+        if ($server !== null) {
             $params["redirect_uri"] = "http://localhost:$actualPort/callback";
         }
         
@@ -91,33 +95,34 @@ class VendorAuthenticateTool implements Tool
 
         $authUrl = $authBaseUrl . (str_contains($authBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
-        if ($noListener) {
+        // ALWAYS try to open browser (unless explicitly disabled)
+        if (!$noBrowser) {
+            if (PHP_OS_FAMILY === "Windows") {
+                @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
+            } elseif (PHP_OS_FAMILY === "Darwin") {
+                @shell_exec('open ' . escapeshellarg($authUrl));
+            } else {
+                @shell_exec('xdg-open ' . escapeshellarg($authUrl) . ' &');
+            }
+        }
+
+        // If no listener available, return with manual flow (browser already opened)
+        if ($server === null) {
+            $message = $noBrowser 
+                ? "Authentication URL generated. Please open it in your browser and copy the token."
+                : "Browser opened for authentication. Complete the login there and copy the token provided.";
+            if ($listenerFailed) {
+                $message .= " (Note: Automatic token capture unavailable - ports 8080-8085 in use.)";
+            }
             return [
                 "success" => true,
-                "message" => "Please obtain a token at the link provided and paste it when prompted.",
+                "message" => $message,
                 "authUrl" => $authUrl,
                 "manual" => true
             ];
         }
 
-        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
-
-        if ($noBrowser) {
-            if ($server) {
-                fclose($server);
-            }
-            return [
-                "success" => true,
-                "message" => "Authentication URL generated. Please complete authentication in your browser and copy the token.",
-                "authUrl" => $authUrl
-            ];
-        }
-
-        // Try to open browser for listener-based flow
-        if (PHP_OS_FAMILY === "Windows") {
-            @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
-        }
-
+        // Wait for automatic token capture via listener
         $resultData = RegistryToolHelper::captureToken($server, 120);
         if ($server) {
             fclose($server);

@@ -166,53 +166,54 @@ class FeaturePackPublishTool implements Tool
 
         if (empty($token)) {
             $port = RegistryToolHelper::getListenerPort($this->context, 8080);
-            $noListener = (bool)($input["noListener"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+            $noListener = (bool)($input["noListener"] ?? false);
+            $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
             $server = null;
+            $listenerFailed = false;
 
+            // Try to start listener for automatic token capture
             if (!$noListener) {
                 $listener = RegistryToolHelper::startListener($port);
                 if ($listener) {
                     [$server, $actualPort] = $listener;
-                    $callbackUrl = "http://localhost:$actualPort/callback";
-                    $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName) . "&redirect_uri=" . urlencode($callbackUrl);
                 } else {
-                    $noListener = true;
+                    $listenerFailed = true;
                 }
             }
 
-            if ($noListener) {
-                $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName);
-                if ($forceUpgrade) $authUrl .= "&force_upgrade=1";
+            // Build auth URL - only include redirect_uri if we have a working listener
+            $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName);
+            if ($server !== null) {
+                $callbackUrl = "http://localhost:$actualPort/callback";
+                $authUrl .= "&redirect_uri=" . urlencode($callbackUrl);
+            }
+            if ($forceUpgrade) {
+                $authUrl .= "&force_upgrade=1";
+            }
+
+            // ALWAYS try to open browser (unless explicitly disabled)
+            if (!$noBrowser) {
+                $this->openBrowser($authUrl);
+            }
+
+            // If no listener available, return with manual flow (browser already opened)
+            if ($server === null) {
+                $message = $noBrowser 
+                    ? "Authentication URL generated. Please open it in your browser and obtain the token."
+                    : "Browser opened for authentication. Complete the login there and copy the token, then call this tool again with the token parameter.";
+                if ($listenerFailed) {
+                    $message .= " (Note: Automatic token capture unavailable - ports 8080-8085 in use.)";
+                }
                 return [
                     "success" => true,
-                    "message" => "Please obtain an upload token manually at the link provided.",
+                    "message" => $message,
                     "status" => "awaiting_token",
                     "authUrl" => $authUrl,
                     "manual" => true
                 ];
             }
 
-            $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
-
-            if ($forceUpgrade) {
-                $authUrl .= "&force_upgrade=1";
-            }
-
-            if ($noBrowser) {
-                if ($server) {
-                    fclose($server);
-                }
-                return [
-                    "success" => true,
-                    "message" => "Authentication URL generated. Please complete authentication in your browser and obtain the token.",
-                    "status" => "awaiting_token",
-                    "authUrl" => $authUrl
-                ];
-            }
-
-            $this->openBrowser($authUrl);
-
-            // Capture token
+            // Wait for automatic token capture via listener
             $resultData = $this->listenForToken($server, 120);
             if ($server) fclose($server);
 
@@ -259,7 +260,11 @@ class FeaturePackPublishTool implements Tool
     protected function openBrowser(string $url): void
     {
         if (PHP_OS_FAMILY === "Windows") {
-            @shell_exec("start " . escapeshellarg($url));
+            @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($url));
+        } elseif (PHP_OS_FAMILY === "Darwin") {
+            @shell_exec('open ' . escapeshellarg($url));
+        } else {
+            @shell_exec('xdg-open ' . escapeshellarg($url) . ' &');
         }
     }
 

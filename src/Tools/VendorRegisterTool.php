@@ -67,21 +67,25 @@ class VendorRegisterTool implements Tool
         $config = RegistryToolHelper::getConfig($this->context);
         $registerBaseUrl = isset($config['registry_register_url']) ? (string)$config['registry_register_url'] : rtrim($registryUrl, '/') . "/auth/register";
 
-        $noListener = (bool)($input["noListener"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+        $noListener = (bool)($input["noListener"] ?? false);
+        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
         $actualPort = $port;
         $server = null;
+        $listenerFailed = false;
 
+        // Try to start listener for automatic token capture
         if (!$noListener) {
             $listener = RegistryToolHelper::startListener($port);
-            if (!$listener) {
-                $noListener = true; // Fallback to manual
-            } else {
+            if ($listener) {
                 [$server, $actualPort] = $listener;
+            } else {
+                $listenerFailed = true;
             }
         }
 
+        // Build URL params - only include redirect_uri if we have a working listener
         $params = [];
-        if (!$noListener) {
+        if ($server !== null) {
             $params["redirect_uri"] = "http://localhost:$actualPort/callback";
         }
 
@@ -91,31 +95,31 @@ class VendorRegisterTool implements Tool
         
         $authUrl = $registerBaseUrl . (str_contains($registerBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
-        if ($noListener) {
-             return [
-                "success" => true,
-                "message" => "Please complete registration at the link provided. Once finished, use 'vendor:authenticate' with the token provided by the registry.",
-                "authUrl" => $authUrl,
-                "manual" => true
-            ];
+        // ALWAYS try to open browser (unless explicitly disabled)
+        if (!$noBrowser) {
+            if (PHP_OS_FAMILY === "Windows") {
+                @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
+            } elseif (PHP_OS_FAMILY === "Darwin") {
+                @shell_exec('open ' . escapeshellarg($authUrl));
+            } else {
+                @shell_exec('xdg-open ' . escapeshellarg($authUrl) . ' &');
+            }
         }
 
-        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
-
-        if ($noBrowser) {
-            if ($server) {
-                fclose($server);
+        // If no listener available, return with manual flow (browser already opened)
+        if ($server === null) {
+            $message = $noBrowser 
+                ? "Registration URL generated. Please open it in your browser and complete registration."
+                : "Browser opened for registration. Complete the form there, then use 'vendor:authenticate' with your token.";
+            if ($listenerFailed) {
+                $message .= " (Note: Automatic token capture unavailable - ports 8080-8085 in use.)";
             }
             return [
                 "success" => true,
-                "message" => "Registration URL generated. Please complete registration in your browser and then use 'vendor:authenticate'.",
-                "authUrl" => $authUrl
+                "message" => $message,
+                "authUrl" => $authUrl,
+                "manual" => true
             ];
-        }
-
-        // Try to open browser early
-        if (PHP_OS_FAMILY === "Windows") {
-            @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
         }
 
         $start = time();

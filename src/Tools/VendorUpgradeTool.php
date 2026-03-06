@@ -66,16 +66,19 @@ class VendorUpgradeTool implements Tool
         $config = RegistryToolHelper::getConfig($this->context);
         $upgradeBaseUrl = isset($config['registry_upgrade_url']) ? (string)$config['registry_upgrade_url'] : rtrim($registryUrl, '/') . "/auth/keys/setup";
 
-        $noListener = (bool)($input["noListener"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
+        $noListener = (bool)($input["noListener"] ?? false);
+        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
         $actualPort = $port;
         $server = null;
+        $listenerFailed = false;
 
+        // Try to start listener for automatic callback capture
         if (!$noListener) {
             $listener = RegistryToolHelper::startListener($port);
-            if (!$listener) {
-                $noListener = true; // Fallback to manual
-            } else {
+            if ($listener) {
                 [$server, $actualPort] = $listener;
+            } else {
+                $listenerFailed = true;
             }
         }
 
@@ -84,36 +87,38 @@ class VendorUpgradeTool implements Tool
             "vendor" => $vendor
         ];
 
-        if (!$noListener) {
+        // Only include redirect_uri if we have a working listener
+        if ($server !== null) {
             $params["redirect_uri"] = "http://localhost:$actualPort/callback";
         }
 
         $authUrl = $upgradeBaseUrl . (str_contains($upgradeBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
-        if ($noListener) {
-            return [
-                "success" => true,
-                "message" => "Please complete security key setup at the link provided.",
-                "authUrl" => $authUrl,
-                "manual" => true
-            ];
+        // ALWAYS try to open browser (unless explicitly disabled)
+        if (!$noBrowser) {
+            if (PHP_OS_FAMILY === "Windows") {
+                @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
+            } elseif (PHP_OS_FAMILY === "Darwin") {
+                @shell_exec('open ' . escapeshellarg($authUrl));
+            } else {
+                @shell_exec('xdg-open ' . escapeshellarg($authUrl) . ' &');
+            }
         }
 
-        $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
-
-        if ($noBrowser) {
-            if ($server) {
-                fclose($server);
+        // If no listener available, return with manual flow (browser already opened)
+        if ($server === null) {
+            $message = $noBrowser 
+                ? "Upgrade URL generated. Please open it in your browser and complete security setup."
+                : "Browser opened for security key setup. Complete the process there.";
+            if ($listenerFailed) {
+                $message .= " (Note: Automatic callback capture unavailable - ports 8080-8085 in use.)";
             }
             return [
                 "success" => true,
-                "message" => "Upgrade URL generated. Please complete security setup in your browser.",
-                "authUrl" => $authUrl
+                "message" => $message,
+                "authUrl" => $authUrl,
+                "manual" => true
             ];
-        }
-
-        if (PHP_OS_FAMILY === "Windows") {
-            @shell_exec("start " . escapeshellarg($authUrl));
         }
 
         $start = time();
