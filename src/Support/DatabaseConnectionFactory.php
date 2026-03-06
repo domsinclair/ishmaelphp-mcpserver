@@ -96,6 +96,16 @@ class DatabaseConnectionFactory
      */
     private function connectSqlite(string $root, array $env): PDO|DatabaseConnectionError
     {
+        // Check if pdo_sqlite extension is loaded before attempting connection
+        if (!extension_loaded('pdo_sqlite')) {
+            $availableDrivers = class_exists('PDO') ? implode(', ', \PDO::getAvailableDrivers()) : 'PDO not loaded';
+            return new DatabaseConnectionError(
+                'SQLite Driver Not Available',
+                'The pdo_sqlite PHP extension is not loaded.',
+                "Available PDO drivers: {$availableDrivers}. Enable pdo_sqlite in your php.ini or ensure you're using the correct PHP binary."
+            );
+        }
+
         $searchedPaths = [];
         $database = null;
 
@@ -184,6 +194,17 @@ class DatabaseConnectionFactory
      */
     private function connectMysqlOrPgsql(string $driver, array $env): PDO|DatabaseConnectionError
     {
+        // Check if the required PDO driver extension is loaded
+        $extensionName = "pdo_{$driver}";
+        if (!extension_loaded($extensionName)) {
+            $availableDrivers = class_exists('PDO') ? implode(', ', \PDO::getAvailableDrivers()) : 'PDO not loaded';
+            return new DatabaseConnectionError(
+                ucfirst($driver) . ' Driver Not Available',
+                "The {$extensionName} PHP extension is not loaded.",
+                "Available PDO drivers: {$availableDrivers}. Enable {$extensionName} in your php.ini."
+            );
+        }
+
         $host = $env['DB_HOST'] ?? '127.0.0.1';
         $port = $env['DB_PORT'] ?? ($driver === 'mysql' ? '3306' : '5432');
         $database = $env['DB_DATABASE'] ?? 'ishmael';
