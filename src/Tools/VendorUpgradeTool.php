@@ -96,13 +96,7 @@ class VendorUpgradeTool implements Tool
 
         // ALWAYS try to open browser (unless explicitly disabled)
         if (!$noBrowser) {
-            if (PHP_OS_FAMILY === "Windows") {
-                @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($authUrl));
-            } elseif (PHP_OS_FAMILY === "Darwin") {
-                @shell_exec('open ' . escapeshellarg($authUrl));
-            } else {
-                @shell_exec('xdg-open ' . escapeshellarg($authUrl) . ' &');
-            }
+            RegistryToolHelper::openBrowser($authUrl);
         }
 
         // If no listener available, return with manual flow (browser already opened)

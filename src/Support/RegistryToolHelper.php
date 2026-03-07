@@ -82,6 +82,24 @@ final class RegistryToolHelper
     }
 
     /**
+     * Opens the given URL in the default system browser.
+     */
+    public static function openBrowser(string $url): void
+    {
+        if (PHP_OS_FAMILY === "Windows") {
+            // escapeshellarg on Windows is broken for URLs containing % (e.g. encoded redirect_uri)
+            // as it replaces percentages with spaces to avoid environment variable expansion in CMD.
+            // We use PowerShell with single-quote escaping which is much safer for URLs.
+            $escapedUrl = str_replace("'", "''", $url);
+            @shell_exec("powershell -WindowStyle Hidden -Command \"Start-Process '$escapedUrl'\"");
+        } elseif (PHP_OS_FAMILY === "Darwin") {
+            @shell_exec('open ' . escapeshellarg($url));
+        } else {
+            @shell_exec('xdg-open ' . escapeshellarg($url) . ' &');
+        }
+    }
+
+    /**
      * Starts a local TCP server on an available port starting from $startPort.
      * 
      * @return array{0: resource, 1: int}|null Returns [server_resource, actual_port] or null on failure.

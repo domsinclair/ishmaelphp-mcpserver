@@ -259,13 +259,7 @@ class FeaturePackPublishTool implements Tool
 
     protected function openBrowser(string $url): void
     {
-        if (PHP_OS_FAMILY === "Windows") {
-            @shell_exec('powershell -WindowStyle Hidden -Command Start-Process ' . escapeshellarg($url));
-        } elseif (PHP_OS_FAMILY === "Darwin") {
-            @shell_exec('open ' . escapeshellarg($url));
-        } else {
-            @shell_exec('xdg-open ' . escapeshellarg($url) . ' &');
-        }
+        RegistryToolHelper::openBrowser($url);
     }
 
     protected function listenForToken($server, int $timeout): ?array
