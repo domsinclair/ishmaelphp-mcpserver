@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.54](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.53...v0.7.54) (2026-03-07)
+
+
+### Bug Fixes
+
+* Opening browser for vendor registration. ([088a72a](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/088a72a3fa672bf8ed2080380acbee8eced27487))
+
 ## [0.7.53](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.52...v0.7.53) (2026-03-06)
 
 
