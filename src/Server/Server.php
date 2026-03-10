@@ -165,12 +165,17 @@
                 }
 
                 if (isset($response['error'])) {
+                    $err = $response['error'];
+                    // If error is a string (legacy/tool failure), normalize to array
+                    if (is_string($err)) {
+                        $err = ['code' => -32000, 'message' => $err, 'details' => null];
+                    }
                     $this->transport->write(
                         ErrorEnvelope::error(
                             $id,
-                            (int)$response['error']['code'],
-                            (string)$response['error']['message'],
-                            $response['error']['details'] ?? null,
+                            (int)($err['code'] ?? -32000),
+                            (string)($err['message'] ?? 'Unknown Error'),
+                            $err['details'] ?? null,
                             $meta
                         )
                     );
