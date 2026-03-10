@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.55](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.54...v0.7.55) (2026-03-10)
+
+
+### Bug Fixes
+
+* More subtle changes to browser opening ([acbce08](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/acbce0858f5390cee7b1ff84f2c9e21c25805ad9))
+
 ## [0.7.54](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.53...v0.7.54) (2026-03-07)
 
 
