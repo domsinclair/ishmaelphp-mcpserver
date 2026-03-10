@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.56](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.55...v0.7.56) (2026-03-10)
+
+
+### Bug Fixes
+
+* refactoring plugin info gathering ([20e0be4](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/20e0be46796d9a01af4162271f4ba2f191b3cb30))
+
 ## [0.7.55](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.54...v0.7.55) (2026-03-10)
 
 
