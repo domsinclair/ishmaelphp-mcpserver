@@ -14,6 +14,7 @@
      */
     class FeaturePackPublishTool implements Tool
     {
+        private const DEFAULT_REGISTRY_URL = 'https://vtl-ishmael-registry.test';
         protected ProjectContext $context;
         protected IshCliBridge $cli;
 
