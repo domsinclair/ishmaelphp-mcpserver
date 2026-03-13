@@ -59,6 +59,7 @@ use Ishmael\McpServer\Providers\IshStubsResourceProvider;
 use Ishmael\McpServer\Server\RequestRouter;
 use Ishmael\McpServer\Server\Server;
 use Ishmael\McpServer\Server\ProjectStateManager;
+use Ishmael\McpServer\Support\IshToolDiscoverer;
 use Ishmael\McpServer\Support\DatabaseConnectionFactory;
 use Ishmael\McpServer\Tools\HealthVersionTool;
 use Ishmael\McpServer\Tools\ProjectInfoTool;
@@ -151,7 +152,11 @@ $router->registerTool(new ArchitectureMapTool($context));
 $router->registerTool(new CapabilitiesDescribeTool($context));
 $router->registerTool(new CliCommandsTool($context));
 $router->registerTool(new DocsSyncTool($context));
-$router->registerTool(new DynamicIshTool($context));
+// Register Dynamic tools (those not covered by dedicated classes)
+$discoverer = new IshToolDiscoverer($context);
+foreach ($discoverer->discover() as $dynamicTool) {
+    $router->registerTool($dynamicTool);
+}
 $router->registerTool(new EnvDriftTool($context));
 $router->registerTool(new EventsListTool($context));
 $router->registerTool(new FeaturePackPackTool($context));
