@@ -73,14 +73,22 @@ final class FeaturePackGenerateComposerTool implements Tool
         // Extract info from manifest
         $name = $manifest['name'] ?? strtolower($moduleName);
         $title = $manifest['title'] ?? $moduleName;
-        $description = $manifest['description'] ?? $manifest['synopsis'] ?? 'An Ishmael feature pack module.';
+        $description = $manifest['synopsis'] ?? $manifest['description'] ?? 'An Ishmael feature pack module.';
         $version = $manifest['version'] ?? '1.0.0';
         $author = $manifest['author'] ?? [];
         $license = $manifest['license'] ?? 'proprietary';
         $dependencies = $manifest['dependencies'] ?? [];
+        $keywords = $manifest['keywords'] ?? ['ishmael', 'feature-pack', 'module'];
 
         // Build vendor/package name
-        $vendorName = strtolower($author['vendor'] ?? 'ishmael-vendor');
+        $vendorName = $author['vendor'] ?? null;
+        if (empty($vendorName) && !empty($author['name'])) {
+            // Slugify author name as a fallback for vendor
+            $vendorName = strtolower(preg_replace('/[^a-zA-Z0-9-]/', '-', (string)$author['name']));
+            $vendorName = trim($vendorName, '-');
+        }
+        $vendorName = $vendorName ?: 'ishmael-vendor';
+
         $packageName = strtolower(preg_replace('/[^a-zA-Z0-9-]/', '-', $name));
         $fullPackageName = "{$vendorName}/{$packageName}";
 
@@ -91,9 +99,9 @@ final class FeaturePackGenerateComposerTool implements Tool
             'type' => 'ishmael-module',
             'version' => $version,
             'license' => $license,
-            'keywords' => ['ishmael', 'feature-pack', 'module'],
+            'keywords' => $keywords,
             'require' => [
-                'php' => '>=8.1',
+                'php' => '>=8.2',
             ],
             'autoload' => [
                 'psr-4' => [
@@ -114,8 +122,9 @@ final class FeaturePackGenerateComposerTool implements Tool
             if (!empty($author['email'])) {
                 $authorEntry['email'] = $author['email'];
             }
-            if (!empty($author['homepage'])) {
-                $authorEntry['homepage'] = $author['homepage'];
+            $homepage = $author['homepage'] ?? $author['url'] ?? null;
+            if (!empty($homepage)) {
+                $authorEntry['homepage'] = $homepage;
             }
             $composer['authors'] = [$authorEntry];
         }
