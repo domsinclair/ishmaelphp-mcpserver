@@ -77,6 +77,7 @@ use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
 use Ishmael\McpServer\Tools\RoutesListTool;
 use Ishmael\McpServer\Tools\FeaturePackValidateTool;
 use Ishmael\McpServer\Tools\FeaturePackGenerateContextTool;
+use Ishmael\McpServer\Tools\FeaturePackGenerateComposerTool;
 use Ishmael\McpServer\Tools\ArchitectureMapTool;
 use Ishmael\McpServer\Tools\CapabilitiesDescribeTool;
 use Ishmael\McpServer\Tools\CliCommandsTool;
@@ -147,6 +148,7 @@ $router->registerTool(new FeaturePackIntegrateTool($context));
 $router->registerTool(new RoutesListTool($context));
 $router->registerTool(new FeaturePackValidateTool($context));
 $router->registerTool(new FeaturePackGenerateContextTool($context));
+$router->registerTool(new FeaturePackGenerateComposerTool($context));
 
 // Register additional tools
 $router->registerTool(new ArchitectureMapTool($context));

@@ -50,6 +50,7 @@ final class FeaturePackValidateTool implements Tool
                 'warnings' => ['type' => 'array', 'items' => ['type' => 'string']],
                 'info' => ['type' => 'array', 'items' => ['type' => 'string']],
                 'missingContextFile' => ['type' => 'boolean'],
+                'missingComposerFile' => ['type' => 'boolean'],
             ],
         ];
     }
@@ -64,6 +65,7 @@ final class FeaturePackValidateTool implements Tool
         $warnings = [];
         $info = [];
         $missingContextFile = false;
+        $missingComposerFile = false;
 
         // Check 1: Module directory exists
         if (!is_dir($moduleDir)) {
@@ -142,6 +144,13 @@ final class FeaturePackValidateTool implements Tool
             $missingContextFile = true;
         }
 
+        // Check 11: composer.json required for publishing
+        $composerPath = $moduleDir . DIRECTORY_SEPARATOR . 'composer.json';
+        if (!is_file($composerPath)) {
+            $errors[] = "Missing required composer.json file. This is required for feature pack publication.";
+            $missingComposerFile = true;
+        }
+
         // Check 10: version field
         if (empty($manifest['version'])) {
             $warnings[] = "Missing 'version' in module.php. Recommended for registry tracking.";
@@ -158,6 +167,7 @@ final class FeaturePackValidateTool implements Tool
             'warnings' => $warnings,
             'info' => $info,
             'missingContextFile' => $missingContextFile,
+            'missingComposerFile' => $missingComposerFile,
         ];
     }
 }
