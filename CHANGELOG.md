@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.65](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.64...v0.7.65) (2026-03-13)
+
+
+### Bug Fixes
+
+* Remove fallback to local host ([c877fe2](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/c877fe2d36fd33a1942ecf7e7c9ee841d5ce85af))
+
 ## [0.7.64](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.63...v0.7.64) (2026-03-13)
 
 
