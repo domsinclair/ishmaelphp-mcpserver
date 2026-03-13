@@ -59,7 +59,8 @@ use Ishmael\McpServer\Providers\IshStubsResourceProvider;
 use Ishmael\McpServer\Server\RequestRouter;
 use Ishmael\McpServer\Server\Server;
 use Ishmael\McpServer\Server\ProjectStateManager;
-use Ishmael\McpServer\Support\IshToolDiscoverer;
+    use Ishmael\McpServer\Support\IntentMapper;
+    use Ishmael\McpServer\Support\IshToolDiscoverer;
 use Ishmael\McpServer\Support\DatabaseConnectionFactory;
 use Ishmael\McpServer\Tools\HealthVersionTool;
 use Ishmael\McpServer\Tools\ProjectInfoTool;
@@ -219,12 +220,15 @@ if ($context->getRoot() !== null && $context->getSandbox() !== null) {
     $providerList[] = new IshStubsResourceProvider($context->getSandbox(), $coreRoot, $context);
 }
 
+    $intentMapPath = __DIR__ . '/../resources/intent-map.json';
+    $intentMapper = new IntentMapper($intentMapPath);
+
 $resources = new AggregateResourceProvider($providerList);
 
 $promptObjects = [
     new BestPracticesPrompt(),
     new DatabaseDesignPrompt(),
-    new IntentRouterPrompt(),
+    new IntentRouterPrompt($intentMapper),
     new PlanFeaturePrompt(),
     new SetupProjectPrompt(),
     new TroubleshootPrompt(),
