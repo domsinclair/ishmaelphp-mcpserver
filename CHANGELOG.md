@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.62](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.61...v0.7.62) (2026-03-13)
+
+
+### Bug Fixes
+
+* updated ish mcp ([96504ab](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/96504abb945bd4beba271c01805f642eb7f17bb9))
+
 ## [0.7.61](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.60...v0.7.61) (2026-03-13)
 
 
