@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.64](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.63...v0.7.64) (2026-03-13)
+
+
+### Bug Fixes
+
+* Added correction for missing composer.json in feature pack. ([c4d51f5](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/c4d51f55abe0d737751cada79fbc8fcedfa02f3b))
+
 ## [0.7.63](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.62...v0.7.63) (2026-03-13)
 
 
