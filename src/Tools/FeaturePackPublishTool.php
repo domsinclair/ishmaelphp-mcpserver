@@ -10,7 +10,16 @@
     use Exception;
 
     /**
-     * Publishes a feature pack to the Ishmael Registry with a high-trust "Pack and Submit" workflow.
+     * Publishes a feature pack to the Ishmael Registry.
+     * 
+     * This tool requires a pre-obtained upload token. The token must be acquired
+     * separately via the vendor:authenticate tool or by visiting the registry
+     * authentication page directly.
+     * 
+     * Flow:
+     * 1. User obtains token (via browser authentication)
+     * 2. User calls this tool with the token
+     * 3. Tool packs the module and uploads to registry
      */
     class FeaturePackPublishTool implements Tool
     {
@@ -31,43 +40,28 @@
 
         public function getDescription(): string
         {
-            return "Orchestrates the entire lifecycle of a feature pack from the local environment to the registry, including zipping, metadata verification, and secure authentication.";
+            return "Packs and publishes a feature pack to the registry. Requires a valid upload token obtained via vendor:authenticate.";
         }
 
         public function getInputSchema(): array
         {
             return [
                 "type" => "object",
-                "required" => ["module_name"],
+                "required" => ["module_name", "token"],
                 "properties" => [
                     "module_name" => [
                         "type" => "string",
                         "description" => "The name of the module to pack and publish."
                     ],
+                    "token" => [
+                        "type" => "string",
+                        "description" => "Upload token obtained from vendor:authenticate or the registry web UI."
+                    ],
                     "registry_url" => [
                         "type" => "string",
                         "description" => "The registry URL. Defaults to https://vtl-ishmael-registry.test.",
                         "default" => self::DEFAULT_REGISTRY_URL
-                    ],
-                    "force_upgrade" => [
-                        "type" => "boolean",
-                        "description" => "If true, force the hardware key (Tier A) setup.",
-                        "default" => false
-                    ],
-                    "token" => [
-                        "type" => "string",
-                        "description" => "Optional pre-obtained upload token. If provided, the local listener is skipped."
-                    ],
-                    "noBrowser" => [
-                        "type" => "boolean",
-                        "description" => "If true, skips server-initiated browser launch.",
-                        "default" => false
-                    ],
-                    "noListener" => [
-                        "type" => "boolean",
-                        "description" => "If true, skip the local TCP listener and just return the auth URL.",
-                        "default" => false
-                    ],
+                    ]
                 ],
             ];
         }
@@ -81,7 +75,7 @@
                     "success" => ["type" => "boolean"],
                     "message" => ["type" => "string"],
                     "status" => ["type" => "string"],
-                    "error" => ["type" => "string"],
+                    "error" => ["type" => "object"],
                 ],
             ];
         }
@@ -89,8 +83,20 @@
         public function execute(array $input): array
         {
             $moduleName = (string)$input["module_name"];
+            $token = (string)($input["token"] ?? "");
             $registryUrl = (string)($input["registry_url"] ?? self::DEFAULT_REGISTRY_URL);
-            $forceUpgrade = (bool)($input["force_upgrade"] ?? false);
+
+            // Fail fast if no token provided
+            if (empty($token)) {
+                return [
+                    "success" => false,
+                    "message" => "Upload token is required. Please obtain a token first using 'Obtain Token' or vendor:authenticate.",
+                    "error" => [
+                        "code" => 401,
+                        "message" => "Missing upload token"
+                    ]
+                ];
+            }
 
             $root = $this->context->getRoot();
             if (!$root) {
@@ -109,9 +115,6 @@
             $contextFile = $moduleDir . DIRECTORY_SEPARATOR . ".ish-context.md";
             $warnings = [];
 
-            // Note: we don't return early if moduleDir doesn't exist yet,
-            // as the 'ish' command might handle it or it might be in a different structure.
-            // However, usually it's in Modules/.
             if (is_dir($moduleDir) && !is_file($contextFile)) {
                 $warnings[] = "Warning: .ish-context.md is missing in the module directory. This may affect the AI-readiness score in the registry.";
             }
@@ -165,76 +168,7 @@
                 }
             }
 
-            // Step B: Secure Authentication (Handshake)
-            $token = (string)($input["token"] ?? "");
-
-            if (empty($token)) {
-                $port = RegistryToolHelper::getListenerPort($this->context, 8080);
-                $noListener = (bool)($input["noListener"] ?? false);
-                $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
-                $server = null;
-                $listenerFailed = false;
-
-                // Try to start listener for automatic token capture
-                if (!$noListener) {
-                    $listener = RegistryToolHelper::startListener($port);
-                    if ($listener) {
-                        [$server, $actualPort] = $listener;
-                    } else {
-                        $listenerFailed = true;
-                    }
-                }
-
-                // Build auth URL - only include redirect_uri if we have a working listener
-                $authUrl = rtrim($registryUrl, '/') . "/auth/publish?module=" . urlencode($moduleName);
-                if ($server !== null) {
-                    $callbackUrl = "http://localhost:$actualPort/callback";
-                    $authUrl .= "&redirect_uri=" . urlencode($callbackUrl);
-                }
-                if ($forceUpgrade) {
-                    $authUrl .= "&force_upgrade=1";
-                }
-
-                // ALWAYS try to open browser (unless explicitly disabled)
-                if (!$noBrowser) {
-                    $this->openBrowser($authUrl);
-                }
-
-                // If no listener available, return with manual flow (browser already opened)
-                if ($server === null) {
-                    $message = $noBrowser
-                        ? "Authentication URL generated. Please open it in your browser and obtain the token."
-                        : "Browser opened for authentication. Complete the login there and copy the token, then call this tool again with the token parameter.";
-                    if ($listenerFailed) {
-                        $message .= " (Note: Automatic token capture unavailable - ports 8080-8085 in use.)";
-                    }
-                    return [
-                        "success" => true,
-                        "message" => $message,
-                        "status" => "awaiting_token",
-                        "authUrl" => $authUrl,
-                        "manual" => true
-                    ];
-                }
-
-                // Wait for automatic token capture via listener
-                $resultData = $this->listenForToken($server, 120);
-                if ($server) fclose($server);
-
-                if ($resultData && isset($resultData['token'])) {
-                    $token = $resultData['token'];
-                }
-            }
-
-            if (empty($token)) {
-                $this->cleanup($distDir, $moduleName);
-                return [
-                    "success" => false,
-                    "message" => "Authentication failed or timed out. Could not obtain Upload Token.",
-                ];
-            }
-
-            // Step D: Secure Upload
+            // Step B: Secure Upload
             $uploadUrl = rtrim($registryUrl, '/') . "/api/publish/upload";
             $uploadResult = $this->uploadToRegistry($uploadUrl, $zipPath, $metadataContent, $token);
 
@@ -246,7 +180,7 @@
                     "success" => false,
                     "message" => $uploadResult["message"] ?? "Upload failed",
                     "error" => [
-                        "code" => -32002,
+                        "code" => $uploadResult["httpCode"] ?? -32002,
                         "message" => $uploadResult["error"] ?? "Unknown upload error"
                     ]
                 ];
@@ -268,22 +202,19 @@
             ];
         }
 
-        protected function openBrowser(string $url): void
-        {
-            RegistryToolHelper::openBrowser($url);
-        }
-
-        protected function listenForToken($server, int $timeout): ?array
-        {
-            return RegistryToolHelper::captureToken($server, $timeout);
-        }
-
         protected function uploadToRegistry(string $uploadUrl, string $zipPath, string $metadataJson, string $token): array
         {
             if (!function_exists("curl_init")) {
                 return [
                     "success" => false,
                     "message" => "CURL extension is missing.",
+                ];
+            }
+
+            if (!is_file($zipPath)) {
+                return [
+                    "success" => false,
+                    "message" => "Feature pack ZIP file not found: $zipPath",
                 ];
             }
 
@@ -302,6 +233,12 @@
                 "Authorization: Bearer $token",
                 "Accept: application/json"
             ]);
+            // Reasonable timeouts for file upload
+            curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+            // SSL settings for local .test domains
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -325,10 +262,21 @@
                 ];
             }
 
+            // Provide specific error messages for common HTTP codes
+            $errorMessage = match ($httpCode) {
+                401 => "Token expired or invalid. Please obtain a new token.",
+                403 => "Access forbidden. You may need a Hardware Key (Tier A) for this vendor.",
+                409 => "A feature pack with this version already exists.",
+                422 => "Validation failed: " . ($data['message'] ?? 'Invalid data'),
+                500 => "Registry server error. Please try again later.",
+                default => "Upload failed (HTTP $httpCode)"
+            };
+
             return [
                 "success" => false,
-                "message" => "Upload failed (HTTP $httpCode)",
-                "error" => $data['error'] ?? (string)$response
+                "message" => $errorMessage,
+                "httpCode" => $httpCode,
+                "error" => $data['error'] ?? $data['message'] ?? (string)$response
             ];
         }
 

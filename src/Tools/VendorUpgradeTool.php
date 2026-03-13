@@ -9,6 +9,9 @@
 
     /**
      * Tool to promote a vendor to Tier A (Hardware) by registering security keys.
+     * 
+     * Opens the browser to the security key setup page and returns immediately.
+     * User completes the WebAuthn registration in browser.
      */
     class VendorUpgradeTool implements Tool
     {
@@ -26,7 +29,7 @@
 
         public function getDescription(): string
         {
-            return "Promote a vendor to Tier A (Hardware) by registering security keys in the Ishmael Registry.";
+            return "Opens browser to promote a vendor to Tier A (Hardware) by registering security keys. Returns immediately - user completes setup in browser.";
         }
 
         public function getInputSchema(): array
@@ -36,10 +39,8 @@
                 "required" => ["vendor"],
                 "properties" => [
                     "vendor" => ["type" => "string", "description" => "The vendor name (slug) to upgrade"],
-                    "port" => ["type" => "integer", "description" => "Local listener port", "default" => 8080],
                     "registryUrl" => ["type" => "string", "description" => "Registry base URL override"],
-                    "noBrowser" => ["type" => "boolean", "description" => "If true, skips server-initiated browser launch.", "default" => false],
-                    "noListener" => ["type" => "boolean", "description" => "If true, skip the local TCP listener and just return the auth URL.", "default" => false]
+                    "noBrowser" => ["type" => "boolean", "description" => "If true, skips browser launch and only returns the upgrade URL.", "default" => false]
                 ]
             ];
         }
@@ -51,8 +52,8 @@
                 "properties" => [
                     "success" => ["type" => "boolean"],
                     "message" => ["type" => "string"],
-                    "tier" => ["type" => "string", "description" => "The new trust tier (A or B)"],
-                    "authUrl" => ["type" => "string"]
+                    "authUrl" => ["type" => "string", "description" => "The upgrade URL to visit"],
+                    "instructions" => ["type" => "string", "description" => "Instructions for the user"]
                 ]
             ];
         }
@@ -61,109 +62,40 @@
         {
             $vendor = (string)$input["vendor"];
             $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : RegistryToolHelper::getRegistryBaseUrl($this->context);
-            $port = $input["port"] ?? RegistryToolHelper::getListenerPort($this->context, 8080);
 
             $config = RegistryToolHelper::getConfig($this->context);
             $upgradeBaseUrl = isset($config['registry_upgrade_url']) ? (string)$config['registry_upgrade_url'] : rtrim($registryUrl, '/') . "/auth/keys/setup";
 
-            $noListener = (bool)($input["noListener"] ?? false);
             $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
-            $actualPort = $port;
-            $server = null;
-            $listenerFailed = false;
-
-            // Try to start listener for automatic callback capture
-            if (!$noListener) {
-                $listener = RegistryToolHelper::startListener($port);
-                if ($listener) {
-                    [$server, $actualPort] = $listener;
-                } else {
-                    $listenerFailed = true;
-                }
-            }
 
             $params = [
                 "upgrade" => "1",
                 "vendor" => $vendor
             ];
 
-            // Only include redirect_uri if we have a working listener
-            if ($server !== null) {
-                $params["redirect_uri"] = "http://localhost:$actualPort/callback";
-            }
-
             $authUrl = $upgradeBaseUrl . (str_contains($upgradeBaseUrl, '?') ? '&' : '?') . http_build_query($params);
 
-            // ALWAYS try to open browser (unless explicitly disabled)
+            // Open browser unless explicitly disabled
             if (!$noBrowser) {
                 RegistryToolHelper::openBrowser($authUrl);
             }
 
-            // If no listener available, return with manual flow (browser already opened)
-            if ($server === null) {
-                $message = $noBrowser
-                    ? "Upgrade URL generated. Please open it in your browser and complete security setup."
-                    : "Browser opened for security key setup. Complete the process there.";
-                if ($listenerFailed) {
-                    $message .= " (Note: Automatic callback capture unavailable - ports 8080-8085 in use.)";
-                }
-                return [
-                    "success" => true,
-                    "message" => $message,
-                    "authUrl" => $authUrl,
-                    "url" => $authUrl,
-                    "manual" => true
-                ];
-            }
+            $instructions = "1. Insert your hardware security key (YubiKey, etc.).\n" .
+                           "2. Complete the WebAuthn registration in your browser.\n" .
+                           "3. After successful registration, your vendor will be promoted to Tier A.\n" .
+                           "4. Use 'Obtain Token' to get a new token with Hardware verification.";
 
-            $start = time();
-            $timeout = 180; // Longer timeout for key registration
-            $resultData = null;
-
-            while (time() - $start < $timeout) {
-                $client = @stream_socket_accept($server, 1);
-                if ($client) {
-                    $request = fread($client, 2048);
-                    if ($request && preg_match("/GET \/callback\?(.*?) HTTP/i", $request, $matches)) {
-                        parse_str($matches[1], $resultData);
-
-                        $tier = $resultData['tier'] ?? 'B';
-                        $tierName = ($tier === 'A') ? 'Tier A (Hardware)' : 'Tier B (Community)';
-
-                        $responseBody = "<html><head><title>Ishmael Registry</title><style>body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f4; } .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1.1rem; } h1 { color: #2c3e50; }</style></head><body><div class='card'><h1>Security Setup Complete</h1><p>Trust Level: <strong>$tierName</strong></p><p>Your vendor account has been updated. You can close this window.</p></div></body></html>";
-                        $response = "HTTP/1.1 200 OK\r\n";
-                        $response .= "Content-Type: text/html\r\n";
-                        $response .= "Content-Length: " . strlen($responseBody) . "\r\n";
-                        $response .= "Connection: close\r\n\r\n";
-                        $response .= $responseBody;
-
-                        fwrite($client, $response);
-                        fclose($client);
-                        break;
-                    }
-                    fclose($client);
-                }
-                usleep(100000);
-            }
-            fclose($server);
-
-            if ($resultData) {
-                $tier = $resultData['tier'] ?? 'B';
-                $success = ($tier === 'A');
-                return [
-                    "success" => true,
-                    "message" => $success ? "Vendor promoted to Tier A (Hardware)." : "Security setup completed, but remains Tier B.",
-                    "tier" => $tier,
-                    "authUrl" => $authUrl,
-                    "url" => $authUrl
-                ];
-            }
+            $message = $noBrowser
+                ? "Upgrade URL generated. Please open it in your browser."
+                : "Browser opened for security key setup.";
 
             return [
-                "success" => false,
-                "message" => "Upgrade timed out or failed.",
+                "success" => true,
+                "message" => $message,
                 "authUrl" => $authUrl,
-                "url" => $authUrl
+                "url" => $authUrl, // Backwards compatibility
+                "instructions" => $instructions,
+                "manual" => true
             ];
         }
     }

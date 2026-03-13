@@ -7,6 +7,10 @@
 
     /**
      * Helper for tools interacting with the Ishmael Registry.
+     * 
+     * This helper provides configuration discovery and browser launching utilities.
+     * Token acquisition is handled via manual copy/paste from the registry web UI
+     * to avoid fragile TCP listener-based flows.
      */
     final class RegistryToolHelper
     {
@@ -73,12 +77,43 @@
         }
 
         /**
-         * Returns the default listener port from config or fallback.
+         * Builds the authentication URL for the registry.
+         *
+         * @param ProjectContext $context The project context
+         * @param string|null $module Optional module name to include in the URL
+         * @param string|null $vendor Optional vendor name to prefill
+         * @param bool $upgrade Whether to force hardware key upgrade flow
+         * @param string|null $registryUrl Optional registry URL override
+         * @return string The full authentication URL
          */
-        public static function getListenerPort(ProjectContext $context, int $default = 8080): int
-        {
+        public static function buildAuthUrl(
+            ProjectContext $context,
+            ?string $module = null,
+            ?string $vendor = null,
+            bool $upgrade = false,
+            ?string $registryUrl = null
+        ): string {
             $config = self::getConfig($context);
-            return isset($config['registry_listener_port']) ? (int)$config['registry_listener_port'] : $default;
+            $baseUrl = $registryUrl ?? self::getRegistryBaseUrl($context);
+            $authBaseUrl = $config['registry_auth_url'] ?? rtrim($baseUrl, '/') . "/auth/publish";
+
+            $params = [];
+            if ($module) {
+                $params['module'] = $module;
+            }
+            if ($vendor) {
+                $params['vendor'] = $vendor;
+            }
+            if ($upgrade) {
+                $params['upgrade'] = '1';
+            }
+
+            $queryString = http_build_query($params);
+            if ($queryString) {
+                return $authBaseUrl . (str_contains($authBaseUrl, '?') ? '&' : '?') . $queryString;
+            }
+
+            return $authBaseUrl;
         }
 
         /**
@@ -88,11 +123,7 @@
         {
             if (PHP_OS_FAMILY === "Windows") {
                 // Use PowerShell to start the browser.
-                // Using -WindowStyle Hidden can sometimes cause issues in certain environments
-                // where the shell might fail to spawn the process if it's already "hidden" or
-                // lack focus. We'll use a more robust way to escape and launch.
-                // We also need to escape $ symbols as PowerShell will try to interpolate them
-                // even in single-quoted strings if the outer command is double-quoted.
+                // We need to escape $ symbols as PowerShell will try to interpolate them.
                 $escapedUrl = str_replace(["'", "$"], ["''", "`$"], $url);
                 $command = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Start-Process '$escapedUrl'\"";
                 @shell_exec($command);
@@ -101,67 +132,5 @@
             } else {
                 @shell_exec('xdg-open ' . escapeshellarg($url) . ' &');
             }
-        }
-
-        /**
-         * Starts a local TCP server on an available port starting from $startPort.
-         *
-         * @return array{0: resource, 1: int}|null Returns [server_resource, actual_port] or null on failure.
-         */
-        public static function startListener(int $startPort, int $maxAttempts = 5): ?array
-        {
-            for ($i = 0; $i < $maxAttempts; $i++) {
-                $port = $startPort + $i;
-                $server = @stream_socket_server("tcp://127.0.0.1:$port", $errno, $errstr);
-                if ($server) {
-                    stream_set_blocking($server, false);
-                    return [$server, $port];
-                }
-            }
-            return null;
-        }
-
-        /**
-         * Captures a token from a local listener.
-         *
-         * @param resource $server The server resource from startListener.
-         * @param int $timeout Timeout in seconds.
-         * @return array|null The captured data or null on timeout.
-         */
-        public static function captureToken($server, int $timeout = 120): ?array
-        {
-            $start = time();
-            $resultData = null;
-
-            while (time() - $start < $timeout) {
-                $read = [$server];
-                $write = null;
-                $except = null;
-                if (stream_select($read, $write, $except, 1) > 0) {
-                    $conn = stream_socket_accept($server);
-                    if ($conn) {
-                        $request = fread($conn, 4096);
-                        if ($request && preg_match("/GET \/callback\?(.*?) HTTP/i", $request, $matches)) {
-                            parse_str($matches[1], $resultData);
-
-                            $tier = $resultData['tier'] ?? 'B';
-                            $tierName = ($tier === 'A' || $tier === 'hardware') ? 'Tier A (Hardware)' : 'Tier B (Community)';
-
-                            $responseBody = "<html><head><title>Ishmael Registry</title><style>body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f4; } .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1.1rem; text-align: center; } h1 { color: #2c3e50; }</style></head><body><div class='card'><h1>Authentication Successful</h1><p>Token captured successfully.</p><p>Trust Level: <strong>$tierName</strong></p><p>You can close this window now.</p></div></body></html>";
-                            $response = "HTTP/1.1 200 OK\r\n";
-                            $response .= "Content-Type: text/html\r\n";
-                            $response .= "Content-Length: " . strlen($responseBody) . "\r\n";
-                            $response .= "Connection: close\r\n\r\n";
-                            $response .= $responseBody;
-
-                            fwrite($conn, $response);
-                            fclose($conn);
-                            return $resultData;
-                        }
-                        fclose($conn);
-                    }
-                }
-            }
-            return null;
         }
     }

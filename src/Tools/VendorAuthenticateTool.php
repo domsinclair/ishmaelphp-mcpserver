@@ -8,7 +8,11 @@
     use Ishmael\McpServer\Support\RegistryToolHelper;
 
     /**
-     * Tool to perform authentication with Ishmael Registry.
+     * Tool to initiate authentication with Ishmael Registry.
+     * 
+     * This tool opens the browser to the registry authentication page and returns immediately.
+     * The user must copy the token from the browser and paste it into the plugin.
+     * This approach eliminates fragile TCP listener-based token capture.
      */
     class VendorAuthenticateTool implements Tool
     {
@@ -26,7 +30,7 @@
 
         public function getDescription(): string
         {
-            return "Obtain an upload token from the Ishmael Registry (supports both Hardware and Community tiers).";
+            return "Opens browser to obtain an upload token from the Ishmael Registry. Returns immediately - user must copy token from browser.";
         }
 
         public function getInputSchema(): array
@@ -37,10 +41,8 @@
                     "module" => ["type" => "string", "description" => "Module name for which to get a token"],
                     "vendor" => ["type" => "string", "description" => "Optional vendor name to prefill"],
                     "upgrade" => ["type" => "boolean", "description" => "If true, forces hardware key registration flow", "default" => false],
-                    "port" => ["type" => "integer", "description" => "Local listener port", "default" => 8080],
                     "registryUrl" => ["type" => "string", "description" => "Registry base URL override"],
-                    "noBrowser" => ["type" => "boolean", "description" => "If true, skips server-initiated browser launch.", "default" => false],
-                    "noListener" => ["type" => "boolean", "description" => "If true, skip the local TCP listener and just return the auth URL.", "default" => false]
+                    "noBrowser" => ["type" => "boolean", "description" => "If true, skips browser launch and only returns the auth URL.", "default" => false]
                 ]
             ];
         }
@@ -52,94 +54,49 @@
                 "properties" => [
                     "success" => ["type" => "boolean"],
                     "message" => ["type" => "string"],
-                    "token" => ["type" => "string"],
-                    "tier" => ["type" => "string", "description" => "A (Hardware) or B (Community)"],
-                    "authUrl" => ["type" => "string"]
+                    "authUrl" => ["type" => "string", "description" => "The authentication URL to visit"],
+                    "instructions" => ["type" => "string", "description" => "Instructions for the user"]
                 ]
             ];
         }
 
         public function execute(array $input): array
         {
-            $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : RegistryToolHelper::getRegistryBaseUrl($this->context);
-            $port = $input["port"] ?? RegistryToolHelper::getListenerPort($this->context, 8080);
-
-            $config = RegistryToolHelper::getConfig($this->context);
-            $authBaseUrl = isset($config['registry_auth_url']) ? (string)$config['registry_auth_url'] : rtrim($registryUrl, '/') . "/auth/publish";
-
-            $noListener = (bool)($input["noListener"] ?? false);
+            $module = isset($input["module"]) ? (string)$input["module"] : null;
+            $vendor = isset($input["vendor"]) ? (string)$input["vendor"] : null;
+            $upgrade = (bool)($input["upgrade"] ?? false);
+            $registryUrl = isset($input["registryUrl"]) ? (string)$input["registryUrl"] : null;
             $noBrowser = (bool)($input["noBrowser"] ?? (getenv('ISH_MCP_NO_BROWSER') === '1'));
-            $actualPort = $port;
-            $server = null;
-            $listenerFailed = false;
 
-            // Try to start listener for automatic token capture
-            if (!$noListener) {
-                $listener = RegistryToolHelper::startListener($port);
-                if ($listener) {
-                    [$server, $actualPort] = $listener;
-                } else {
-                    $listenerFailed = true;
-                }
-            }
+            // Build the authentication URL
+            $authUrl = RegistryToolHelper::buildAuthUrl(
+                $this->context,
+                $module,
+                $vendor,
+                $upgrade,
+                $registryUrl
+            );
 
-            // Build URL params - only include redirect_uri if we have a working listener
-            $params = [];
-            if ($server !== null) {
-                $params["redirect_uri"] = "http://localhost:$actualPort/callback";
-            }
-
-            if (!empty($input["module"])) $params["module"] = $input["module"];
-            if (!empty($input["vendor"])) $params["vendor"] = $input["vendor"];
-            if (!empty($input["upgrade"])) $params["upgrade"] = "1";
-
-            $authUrl = $authBaseUrl . (str_contains($authBaseUrl, '?') ? '&' : '?') . http_build_query($params);
-
-            // ALWAYS try to open browser (unless explicitly disabled)
+            // Open browser unless explicitly disabled
             if (!$noBrowser) {
                 RegistryToolHelper::openBrowser($authUrl);
             }
 
-            // If no listener available, return with manual flow (browser already opened)
-            if ($server === null) {
-                $message = $noBrowser
-                    ? "Authentication URL generated. Please open it in your browser and copy the token."
-                    : "Browser opened for authentication. Complete the login there and copy the token provided.";
-                if ($listenerFailed) {
-                    $message .= " (Note: Automatic token capture unavailable - ports 8080-8085 in use.)";
-                }
-                return [
-                    "success" => true,
-                    "message" => $message,
-                    "authUrl" => $authUrl,
-                    "url" => $authUrl,
-                    "manual" => true
-                ];
-            }
+            $instructions = "1. Complete authentication in your browser.\n" .
+                           "2. Copy the token displayed after successful login.\n" .
+                           "3. Paste the token into the plugin dialog.";
 
-            // Wait for automatic token capture via listener
-            $resultData = RegistryToolHelper::captureToken($server, 120);
-            if ($server) {
-                fclose($server);
-            }
-
-            if ($resultData && isset($resultData['token'])) {
-                return [
-                    "success" => true,
-                    "message" => "Authentication successful.",
-                    "token" => $resultData['token'],
-                    "tier" => $resultData['tier'] ?? 'B',
-                    "authUrl" => $authUrl,
-                    "url" => $authUrl
-                ];
-            }
+            $message = $noBrowser
+                ? "Authentication URL generated. Please open it in your browser."
+                : "Browser opened for authentication.";
 
             return [
-                "success" => false,
-                "message" => "Authentication timed out or failed. Ensure you completed the handshake in your browser.",
+                "success" => true,
+                "message" => $message,
                 "authUrl" => $authUrl,
-                "url" => $authUrl
+                "url" => $authUrl, // Backwards compatibility
+                "instructions" => $instructions,
+                "manual" => true
             ];
         }
-
     }
