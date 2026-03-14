@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.66](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.65...v0.7.66) (2026-03-14)
+
+
+### Bug Fixes
+
+* composer.json creation for feature packs ([a1c6856](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/a1c685632424d2f2738dc6a7f96764b1cc13ebfd))
+
 ## [0.7.65](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.64...v0.7.65) (2026-03-13)
 
 
