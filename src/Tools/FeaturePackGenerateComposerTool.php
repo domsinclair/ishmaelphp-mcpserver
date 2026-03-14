@@ -113,6 +113,13 @@ final class FeaturePackGenerateComposerTool implements Tool
                     'module' => $moduleName,
                     'capabilities' => $manifest['capabilities'] ?? [],
                 ],
+                'ishmael-registry' => [
+                    'title' => $title,
+                    'category' => $manifest['category'] ?? 'general',
+                    'capabilities' => $manifest['capabilities'] ?? [],
+                    'license_enforcement' => $manifest['license_enforcement'] ?? 'none',
+                    'tags' => $manifest['tags'] ?? ['alpha'],
+                ],
             ],
         ];
 
