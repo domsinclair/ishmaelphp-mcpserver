@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.67](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.66...v0.7.67) (2026-03-20)
+
+
+### Bug Fixes
+
+* Added download logic for feature packs ([b6331b1](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/b6331b17f2444741312295d54dfdc3544c8a9556))
+
 ## [0.7.66](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.65...v0.7.66) (2026-03-14)
 
 
