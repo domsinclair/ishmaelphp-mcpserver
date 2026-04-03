@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.69](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.68...v0.7.69) (2026-04-03)
+
+
+### Bug Fixes
+
+* Improved the mcp server's ability to work strictly within the bounds of the ishmael framework. ([d555827](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/d555827cc97606c9c34a014dbd04c46f25af9cfe))
+* Improved the mcp server's ability to work strictly within the bounds of the ishmael framework. ([f4e596f](https://github.com/domsinclair/ishmaelphp-mcpserver/commit/f4e596fa81f2f8cfd12d649d0921ee691b494f33))
+
 ## [0.7.68](https://github.com/domsinclair/ishmaelphp-mcpserver/compare/v0.7.67...v0.7.68) (2026-03-20)
 
 
