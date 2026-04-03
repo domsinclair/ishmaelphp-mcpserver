@@ -19,7 +19,13 @@ use Ishmael\McpServer\Support\JsonSchemaValidator;
  */
 final class ProjectStateManager
 {
+    public const MODE_STRICT = 'strict';
+    public const MODE_GUIDED = 'guided';
+    public const MODE_FREEFORM = 'freeform';
+
+    /** @deprecated Use MODE_STRICT, MODE_GUIDED or MODE_FREEFORM */
     public const MODE_QUICK = 'quick';
+    /** @deprecated Use MODE_STRICT, MODE_GUIDED or MODE_FREEFORM */
     public const MODE_STANDARD = 'standard';
 
     public const INIT = 'INIT';
@@ -69,18 +75,81 @@ final class ProjectStateManager
     public function getMode(): string
     {
         $this->load();
-        return is_string($this->data['mode'] ?? null) ? (string)$this->data['mode'] : self::MODE_QUICK;
+        $mode = is_string($this->data['mode'] ?? null) ? (string)$this->data['mode'] : self::MODE_STRICT;
+        
+        // Map legacy modes to new modes if found
+        if ($mode === self::MODE_QUICK) {
+            return self::MODE_FREEFORM;
+        }
+        if ($mode === self::MODE_STANDARD) {
+            return self::MODE_STRICT;
+        }
+
+        return $mode;
     }
 
     /** Set mode and persist. */
     public function setMode(string $mode): void
     {
         $this->load();
-        if (!in_array($mode, [self::MODE_QUICK, self::MODE_STANDARD], true)) {
+        $validModes = [
+            self::MODE_STRICT,
+            self::MODE_GUIDED,
+            self::MODE_FREEFORM,
+            self::MODE_QUICK,
+            self::MODE_STANDARD,
+        ];
+        if (!in_array($mode, $validModes, true)) {
             throw new \InvalidArgumentException('Invalid mode: ' . $mode);
         }
         $this->data['mode'] = $mode;
         $this->save();
+    }
+
+    /**
+     * Log a tool invocation.
+     */
+    public function logToolInvocation(string $toolName, array $arguments = [], array $result = []): void
+    {
+        $this->load();
+        $this->data['tool_invocation_log'][] = [
+            'tool' => $toolName,
+            'arguments' => $arguments,
+            'result' => $result,
+            'ts' => (int)floor(microtime(true) * 1000),
+        ];
+        $this->save();
+    }
+
+    /**
+     * Log a resource access.
+     */
+    public function logResourceAccess(string $uri): void
+    {
+        $this->load();
+        $this->data['resource_access_log'][] = [
+            'uri' => $uri,
+            'ts' => (int)floor(microtime(true) * 1000),
+        ];
+        $this->save();
+    }
+
+    /**
+     * Get the resource access log.
+     */
+    public function getResourceAccessLog(): array
+    {
+        $this->load();
+        return $this->data['resource_access_log'] ?? [];
+    }
+
+    /**
+     * Get the tool invocation log.
+     */
+    public function getToolInvocationLog(): array
+    {
+        $this->load();
+        return $this->data['tool_invocation_log'] ?? [];
     }
 
     /** Get current orchestration state. */
@@ -137,10 +206,11 @@ final class ProjectStateManager
     public function reset(): void
     {
         $this->data = [
-            'mode' => self::MODE_QUICK,
+            'mode' => self::MODE_STRICT,
             'state' => self::INIT,
             'locked' => [],
             'history' => [],
+            'tool_invocation_log' => [],
             'version' => 1,
         ];
         $this->save();
@@ -180,7 +250,7 @@ final class ProjectStateManager
         $this->data = $parsed;
         // Backfill defaults
         if (!isset($this->data['mode'])) {
-            $this->data['mode'] = self::MODE_QUICK;
+            $this->data['mode'] = self::MODE_STRICT;
         }
         if (!isset($this->data['state'])) {
             $this->data['state'] = self::INIT;
@@ -190,6 +260,9 @@ final class ProjectStateManager
         }
         if (!isset($this->data['history']) || !is_array($this->data['history'])) {
             $this->data['history'] = [];
+        }
+        if (!isset($this->data['tool_invocation_log']) || !is_array($this->data['tool_invocation_log'])) {
+            $this->data['tool_invocation_log'] = [];
         }
         if (!isset($this->data['version'])) {
             $this->data['version'] = 1;

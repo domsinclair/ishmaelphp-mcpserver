@@ -29,13 +29,19 @@ final class McpModeToolTest extends TestCase
         // Query current mode
         $resp = $router->dispatch('ish:mcp:mode', []);
         $this->assertArrayHasKey('result', $resp);
-        $this->assertSame(ProjectStateManager::MODE_QUICK, $resp['result']['mode']);
+        $this->assertSame(ProjectStateManager::MODE_STRICT, $resp['result']['mode']);
         $this->assertSame(ProjectStateManager::INIT, $resp['result']['state']);
+        $this->assertArrayHasKey('tool_invocation_log', $resp['result']);
 
-        // Set to standard
-        $resp2 = $router->dispatch('ish:mcp:mode', ['mode' => ProjectStateManager::MODE_STANDARD]);
+        // Set to freeform
+        $resp2 = $router->dispatch('ish:mcp:mode', ['mode' => ProjectStateManager::MODE_FREEFORM]);
         $this->assertArrayHasKey('result', $resp2);
-        $this->assertSame(ProjectStateManager::MODE_STANDARD, $resp2['result']['mode']);
+        $this->assertSame(ProjectStateManager::MODE_FREEFORM, $resp2['result']['mode']);
+
+        // Legacy standard maps to strict
+        $resp3 = $router->dispatch('ish:mcp:mode', ['mode' => ProjectStateManager::MODE_STANDARD]);
+        $this->assertArrayHasKey('result', $resp3);
+        $this->assertSame(ProjectStateManager::MODE_STRICT, $resp3['result']['mode']);
 
         // Invalid value rejected by input schema
         $bad = $router->dispatch('ish:mcp:mode', ['mode' => 'invalid']);

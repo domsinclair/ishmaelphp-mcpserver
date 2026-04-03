@@ -58,8 +58,28 @@ final class IntentRouterPrompt implements Prompt
         $description = $this->mapper->getIntentDescription($intentId);
         $rules = $this->mapper->getClarificationRules($intentId);
         $contract = $this->mapper->getBehaviourContract($intentId);
+        $requiredTools = $this->mapper->getRequiredTools($intentId);
+        $preFlightProviders = $this->mapper->getPreFlightProviders($intentId);
 
         $response = "Detected Intent: **{$intentId}** ({$description})\n\n";
+
+        if ($preFlightProviders) {
+            $response .= "### Pre-Flight Context Gathering\n";
+            $response .= "Before performing any work, you MUST query the following resource providers to ground your understanding in the current project state:\n";
+            foreach ($preFlightProviders as $provider) {
+                $response .= "- `{$provider}`\n";
+            }
+            $response .= "\n";
+        }
+
+        if ($requiredTools) {
+            $response .= "### Mandatory Tool Usage\n";
+            $response .= "In **STRICT** mode, you MUST use the following tools for implementation. Manual code generation for supported constructs is forbidden:\n";
+            foreach ($requiredTools as $tool) {
+                $response .= "- `{$tool}`\n";
+            }
+            $response .= "\n";
+        }
 
         if ($rules && !empty($rules['questions'])) {
             $response .= "### Clarifying Questions\n";

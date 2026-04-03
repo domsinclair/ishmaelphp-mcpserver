@@ -19,15 +19,15 @@ final class ProjectStateManagerTest extends TestCase
         $root = $this->makeTempDir();
         $mgr = new ProjectStateManager($root);
         $this->assertSame(ProjectStateManager::INIT, $mgr->getState());
-        $this->assertSame(ProjectStateManager::MODE_QUICK, $mgr->getMode());
+        $this->assertSame(ProjectStateManager::MODE_STRICT, $mgr->getMode());
 
         // Change mode and persist
-        $mgr->setMode(ProjectStateManager::MODE_STANDARD);
-        $this->assertSame(ProjectStateManager::MODE_STANDARD, $mgr->getMode());
+        $mgr->setMode(ProjectStateManager::MODE_FREEFORM);
+        $this->assertSame(ProjectStateManager::MODE_FREEFORM, $mgr->getMode());
 
         // New instance picks up persisted mode
         $mgr2 = new ProjectStateManager($root);
-        $this->assertSame(ProjectStateManager::MODE_STANDARD, $mgr2->getMode());
+        $this->assertSame(ProjectStateManager::MODE_FREEFORM, $mgr2->getMode());
         $this->assertSame(ProjectStateManager::INIT, $mgr2->getState());
 
         // Transition flow happy path
@@ -49,5 +49,41 @@ final class ProjectStateManagerTest extends TestCase
         $this->assertTrue($mgr2->transition(ProjectStateManager::ACCEPTED));
         $this->assertSame(ProjectStateManager::INIT, $mgr2->getState());
         $this->assertSame([], $mgr2->getLockedStages());
+    }
+
+    public function test_legacy_mode_mapping(): void
+    {
+        $root = $this->makeTempDir();
+        $stateFile = $root . DIRECTORY_SEPARATOR . '.ishmael' . DIRECTORY_SEPARATOR . 'mcp_state.json';
+        mkdir(dirname($stateFile), 0777, true);
+
+        // Simulate legacy QUICK mode
+        file_put_contents($stateFile, json_encode(['mode' => 'quick', 'state' => 'INIT']));
+        $mgr = new ProjectStateManager($root);
+        $this->assertSame(ProjectStateManager::MODE_FREEFORM, $mgr->getMode());
+
+        // Simulate legacy STANDARD mode
+        file_put_contents($stateFile, json_encode(['mode' => 'standard', 'state' => 'INIT']));
+        $mgr2 = new ProjectStateManager($root);
+        $this->assertSame(ProjectStateManager::MODE_STRICT, $mgr2->getMode());
+    }
+
+    public function test_tool_invocation_logging(): void
+    {
+        $root = $this->makeTempDir();
+        $mgr = new ProjectStateManager($root);
+        $this->assertCount(0, $mgr->getToolInvocationLog());
+
+        $mgr->logToolInvocation('test:tool', ['foo' => 'bar'], ['ok' => true]);
+        $log = $mgr->getToolInvocationLog();
+        $this->assertCount(1, $log);
+        $this->assertSame('test:tool', $log[0]['tool']);
+        $this->assertSame(['foo' => 'bar'], $log[0]['arguments']);
+        $this->assertSame(['ok' => true], $log[0]['result']);
+        $this->assertIsInt($log[0]['ts']);
+
+        // New instance picks it up
+        $mgr2 = new ProjectStateManager($root);
+        $this->assertCount(1, $mgr2->getToolInvocationLog());
     }
 }

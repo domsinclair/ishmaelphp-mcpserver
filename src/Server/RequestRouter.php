@@ -189,6 +189,10 @@
             // Execute tool
             try {
                 $result = $tool->execute($params);
+                // Log tool invocation if successful
+                if ($this->stateManager !== null) {
+                    $this->stateManager->logToolInvocation($method, $params, $result);
+                }
             } catch (\Throwable $e) {
                 return [
                     'error' => [

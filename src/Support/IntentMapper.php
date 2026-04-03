@@ -65,6 +65,28 @@ final class IntentMapper
         return $this->intentMap['intents'][$intentId]['description'] ?? null;
     }
 
+    /**
+     * Get required tools for an intent.
+     * 
+     * @param string $intentId
+     * @return string[]
+     */
+    public function getRequiredTools(string $intentId): array
+    {
+        return (array)($this->intentMap['intents'][$intentId]['required_tools'] ?? []);
+    }
+
+    /**
+     * Get pre-flight providers for an intent.
+     * 
+     * @param string $intentId
+     * @return string[]
+     */
+    public function getPreFlightProviders(string $intentId): array
+    {
+        return (array)($this->intentMap['intents'][$intentId]['pre_flight_providers'] ?? []);
+    }
+
     private function detectGlossaryTerms(string $input): array
     {
         $detected = [];

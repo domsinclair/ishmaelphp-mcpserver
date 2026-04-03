@@ -90,4 +90,27 @@ final class IntentMapperTest extends TestCase
         $this->assertContains('database', $result['terms']);
         $this->assertContains('ui_stack', $result['terms']);
     }
+
+    public function testRetrievesRequiredToolsAndProviders(): void
+    {
+        $mapper = new IntentMapper($this->mapPath);
+        
+        $tools = $mapper->getRequiredTools('create_local_module');
+        $this->assertContains('ish:make:module', $tools);
+        $this->assertContains('ish:make:migration', $tools);
+
+        $providers = $mapper->getPreFlightProviders('create_local_module');
+        $this->assertContains('ish://framework/introspection', $providers);
+        $this->assertContains('ish://database/schema', $providers);
+    }
+
+    public function testDetectsNewGlossaryTerms(): void
+    {
+        $mapper = new IntentMapper($this->mapPath);
+        
+        $result = $mapper->detect('I need to create a new service and repository');
+        
+        $this->assertContains('service', $result['terms']);
+        $this->assertContains('repository', $result['terms']);
+    }
 }

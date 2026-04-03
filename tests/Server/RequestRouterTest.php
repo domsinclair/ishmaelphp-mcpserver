@@ -6,6 +6,7 @@ namespace Ishmael\McpServer\Tests\Server;
 
 use Ishmael\McpServer\Contracts\Tool;
 use Ishmael\McpServer\Server\RequestRouter;
+use Ishmael\McpServer\Server\ProjectStateManager;
 use Ishmael\McpServer\Tools\DynamicIshTool;
 use PHPUnit\Framework\TestCase;
 
@@ -56,5 +57,32 @@ final class RequestRouterTest extends TestCase
         $tools = $router->listTools();
         $this->assertCount(1, $tools);
         $this->assertEquals('Dedicated', $tools[0]['description']);
+    }
+
+    public function testDispatchLogsToolInvocation(): void
+    {
+        $root = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ish_router_test_' . bin2hex(random_bytes(4));
+        @mkdir($root, 0777, true);
+        $state = new ProjectStateManager($root);
+        $router = new RequestRouter(null, null, null, null, $state);
+
+        $tool = $this->createMock(Tool::class);
+        $tool->method('getName')->willReturn('ish:test');
+        $tool->method('getInputSchema')->willReturn(['type' => 'object', 'additionalProperties' => true]);
+        $tool->method('execute')->willReturn(['result' => ['ok' => true]]);
+
+        $router->registerTool($tool);
+
+        // Before dispatch, log is empty
+        $this->assertCount(0, $state->getToolInvocationLog());
+
+        // Dispatch
+        $router->dispatch('ish:test', ['foo' => 'bar']);
+
+        // Now it should be logged
+        $log = $state->getToolInvocationLog();
+        $this->assertCount(1, $log);
+        $this->assertEquals('ish:test', $log[0]['tool']);
+        $this->assertEquals(['foo' => 'bar'], $log[0]['arguments']);
     }
 }

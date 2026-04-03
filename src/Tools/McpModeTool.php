@@ -30,7 +30,7 @@ final class McpModeTool implements Tool
 
     public function getDescription(): string
     {
-        return 'Get or set the orchestration mode (quick|standard) and return current state.';
+        return 'Get or set the orchestration mode (strict|guided|freeform) and return current state.';
     }
 
     public function getInputSchema(): array
@@ -39,7 +39,13 @@ final class McpModeTool implements Tool
             'type' => 'object',
             'additionalProperties' => false,
             'properties' => [
-                'mode' => [ 'type' => 'string', 'enum' => [ProjectStateManager::MODE_QUICK, ProjectStateManager::MODE_STANDARD] ],
+                'mode' => [ 'type' => 'string', 'enum' => [
+                    ProjectStateManager::MODE_STRICT,
+                    ProjectStateManager::MODE_GUIDED,
+                    ProjectStateManager::MODE_FREEFORM,
+                    ProjectStateManager::MODE_QUICK,
+                    ProjectStateManager::MODE_STANDARD,
+                ] ],
             ],
         ];
     }
@@ -50,10 +56,27 @@ final class McpModeTool implements Tool
             'type' => 'object',
             'required' => ['mode', 'state'],
             'properties' => [
-                'mode' => [ 'type' => 'string', 'enum' => [ProjectStateManager::MODE_QUICK, ProjectStateManager::MODE_STANDARD] ],
+                'mode' => [ 'type' => 'string', 'enum' => [
+                    ProjectStateManager::MODE_STRICT,
+                    ProjectStateManager::MODE_GUIDED,
+                    ProjectStateManager::MODE_FREEFORM,
+                    ProjectStateManager::MODE_QUICK,
+                    ProjectStateManager::MODE_STANDARD,
+                ] ],
                 'state' => [ 'type' => 'string' ],
                 'locked' => [ 'type' => 'array', 'items' => [ 'type' => 'string' ] ],
                 'stateFile' => [ 'type' => 'string' ],
+                'tool_invocation_log' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'tool' => [ 'type' => 'string' ],
+                            'arguments' => [ 'type' => 'object' ],
+                            'ts' => [ 'type' => 'integer' ],
+                        ],
+                    ],
+                ],
             ],
         ];
     }
@@ -69,6 +92,7 @@ final class McpModeTool implements Tool
             'state' => $this->state->getState(),
             'locked' => $this->state->getLockedStages(),
             'stateFile' => $this->state->getStateFile(),
+            'tool_invocation_log' => $this->state->getToolInvocationLog(),
         ];
     }
 }

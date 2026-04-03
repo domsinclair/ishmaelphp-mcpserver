@@ -84,6 +84,42 @@
         "history",
         "paper trail"
       ]
+    },
+    "service": {
+      "description": "An IshmaelPHP service class for business logic",
+      "synonyms": [
+        "service",
+        "logic",
+        "business logic",
+        "service class"
+      ]
+    },
+    "repository": {
+      "description": "An IshmaelPHP repository class for data access",
+      "synonyms": [
+        "repository",
+        "repo",
+        "data access",
+        "storage logic"
+      ]
+    },
+    "dto": {
+      "description": "A Data Transfer Object (DTO) for structured data",
+      "synonyms": [
+        "dto",
+        "data transfer object",
+        "data object",
+        "struct"
+      ]
+    },
+    "migration": {
+      "description": "A database schema migration file",
+      "synonyms": [
+        "migration",
+        "db migration",
+        "schema change",
+        "table create"
+      ]
     }
   },
   "intents": {
@@ -91,29 +127,60 @@
       "description": "User wants to create a new local module for their application",
       "required_terms": ["local_module"],
       "supporting_terms": ["create", "add", "make", "module"],
+      "required_tools": [
+        "ish:capabilities:describe",
+        "ish:make:module",
+        "ish:make:migration",
+        "ish:env:validate"
+      ],
+      "pre_flight_providers": [
+        "ish://framework/introspection",
+        "ish://database/schema",
+        "ish://config/app"
+      ],
       "confidence_threshold": 0.5,
-      "version": "1.0"
+      "version": "1.1"
     },
     "design_feature_pack": {
       "description": "User wants to design a new IshmaelPHP feature pack",
       "required_terms": ["feature_pack"],
       "supporting_terms": ["create", "build", "design", "make"],
+      "required_tools": [
+        "ish:capabilities:describe",
+        "ish:featurePack:create",
+        "ish:featurePack:validate"
+      ],
+      "pre_flight_providers": [
+        "ish://framework/introspection"
+      ],
       "confidence_threshold": 0.6,
-      "version": "1.0"
+      "version": "1.1"
     },
     "add_licensing_to_pack": {
       "description": "User wants to add licensing to an existing feature pack",
       "required_terms": ["feature_pack", "licensing"],
       "supporting_terms": ["add", "enable", "protect"],
+      "required_tools": [
+        "ish:capabilities:describe",
+        "ish:featurePack:acquire",
+        "ish:featurePack:validate"
+      ],
+      "pre_flight_providers": [
+        "ish://framework/introspection"
+      ],
       "confidence_threshold": 0.6,
-      "version": "1.0"
+      "version": "1.1"
     },
     "scaffold_starter_project": {
       "description": "User wants to create a new IshmaelPHP starter project",
       "required_terms": ["starter_project"],
       "supporting_terms": ["create", "new", "generate"],
+      "required_tools": [
+        "ish:make:project",
+        "ish:env:validate"
+      ],
       "confidence_threshold": 0.6,
-      "version": "1.0"
+      "version": "1.1"
     }
   },
   "clarification_rules": {

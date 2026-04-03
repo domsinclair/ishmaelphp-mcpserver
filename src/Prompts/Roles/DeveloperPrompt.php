@@ -25,10 +25,20 @@ final class DeveloperPrompt implements Prompt
     {
         $designSummary = (string)($this->arguments['designSummary'] ?? '');
         $notes = (string)($this->arguments['notes'] ?? '');
+        $mode = (string)($this->arguments['mode'] ?? 'strict');
 
         $prompt = "You are the Developer. Your responsibility is to implement the approved architecture verbatim.\n\n"
-            . "Do not change architecture decisions or introduce new features.\n\n"
-            . "Deliverables:\n- Production-ready source code following Ishmael conventions.\n- implementation.notes.md (explain intent, rationale, and non-obvious decisions).\n- implementation.manifest.json (file list, commands executed, migrations, and routes touched).\n\n"
+            . "Current Orchestration Mode: **" . strtoupper($mode) . "**\n\n"
+            . "Do not change architecture decisions or introduce new features.\n\n";
+
+        if ($mode === 'strict') {
+            $prompt .= "### STRICT MODE ENFORCEMENT\n"
+                . "- You MUST use tool-first execution. Do not generate code manually where Ishmael tools exist (e.g., use `ish:make:migration` instead of writing raw migration files).\n"
+                . "- You MUST NOT infer framework patterns from Laravel or Symfony.\n"
+                . "- You MUST NOT skip the validation phase. Run `ish:env:validate` or `ish:featurePack:validate` after implementation.\n\n";
+        }
+
+        $prompt .= "Deliverables:\n- Production-ready source code following Ishmael conventions.\n- implementation.notes.md (explain intent, rationale, and non-obvious decisions).\n- implementation.manifest.json (file list, commands executed, migrations, and routes touched).\n\n"
             . "Guidance:\n- Use ish CLI scaffolding where appropriate.\n- Write maintainable, well-documented code.\n- Ensure tests/build steps used by the project still pass.\n\n"
             . "Architecture Summary:\n$designSummary\n\nAdditional Notes (optional):\n$notes\n";
 
@@ -40,6 +50,7 @@ final class DeveloperPrompt implements Prompt
         return [
             [ 'name' => 'designSummary', 'description' => 'Approved architecture description and constraints.', 'required' => true ],
             [ 'name' => 'notes', 'description' => 'Any operational notes or branch information.', 'required' => false ],
+            [ 'name' => 'mode', 'description' => 'Current orchestration mode (strict, guided, freeform).', 'required' => false ],
         ];
     }
 

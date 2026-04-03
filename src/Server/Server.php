@@ -111,6 +111,11 @@
                         $name = (string)($params['name'] ?? '');
                         $args = is_array($params['arguments'] ?? null) ? $params['arguments'] : [];
 
+                        // Phase 3: Inject orchestration mode for role prompts
+                        if (str_starts_with($name, 'role:') && !isset($args['mode'])) {
+                            $args['mode'] = $this->stateManager->getMode();
+                        }
+
                         // Phase 2: State-gated prompts
                         if (!$this->isPromptAllowedForState($name)) {
                             $response = ['error' => [ 'code' => 40301, 'message' => "Prompt '{$name}' is not allowed in state " . $this->stateManager->getState() ]];
@@ -131,6 +136,9 @@
                         break;
                     case 'resources/read':
                         $uri = (string)($params['uri'] ?? '');
+                        if ($this->stateManager !== null) {
+                            $this->stateManager->logResourceAccess($uri);
+                        }
                         $this->transport->logError("Reading resource: $uri");
                         $content = $this->resources->readResource($uri);
                         if ($content !== null) {
@@ -187,14 +195,14 @@
         }
         private function isPromptAllowedForState(string $name): bool
         {
-            // Quick mode: allow Analyst and Developer prompts without strict gating
+            // Freeform mode: allow all prompts
             $mode = $this->stateManager->getMode();
-            if ($mode === ProjectStateManager::MODE_QUICK) {
-                return in_array($name, ['role:analyst', 'role:developer'], true) || strpos($name, 'role:') !== 0;
+            if ($mode === ProjectStateManager::MODE_FREEFORM || $mode === ProjectStateManager::MODE_QUICK) {
+                return true;
             }
 
+            // Guided and Strict modes: gate role prompts by orchestration state
             $state = $this->stateManager->getState();
-            // In Standard mode, gate role prompts by orchestration state
             $map = [
                 ProjectStateManager::INIT => ['role:analyst'],
                 ProjectStateManager::ANALYSIS_COMPLETE => ['role:architect'],
