@@ -9,6 +9,7 @@
     use Ishmael\McpServer\Support\ComposerBridge;
     use Ishmael\McpServer\Support\IshCliBridge;
     use Ishmael\McpServer\Support\RegistryToolHelper;
+    use Ishmael\McpServer\Tools\FeaturePackIntegrateTool;
     use ZipArchive;
 
     final class FeaturePackAcquireTool implements Tool
@@ -261,6 +262,7 @@
             // ------------------------------------------------------------------ //
             // Step 5 — Integrate                                                  //
             // ------------------------------------------------------------------ //
+            $integrateTool = new FeaturePackIntegrateTool($this->context);
             $intResult     = $integrateTool->execute([
                 'packs'   => [$slug],
                 'dryRun'  => false,
